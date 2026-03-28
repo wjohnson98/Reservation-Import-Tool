@@ -597,6 +597,16 @@ input[type="range"]::-moz-range-thumb {
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
       <div class="progress-label" id="progressLabel">Preparing guest names...</div>
     </div>
+    <div id="importInstructions" class="panel" style="display:none;margin-top:20px;">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="font-size:22px;flex-shrink:0;margin-top:2px;">&#9989;</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--cb-navy);margin-bottom:4px;">CSV Ready &mdash; Now Import into Cloudbeds</div>
+          <p style="font-size:12px;color:var(--cb-muted);line-height:1.6;margin-bottom:12px;">Your reservation import file has been downloaded. Follow the guide below to upload it into your Cloudbeds property.</p>
+          <a href="https://scribehow.com/viewer/How_to_Import_Reservation_Data_into_Cloudbeds__VIv9iMaUS3min1SFsF5kgQ" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;background:var(--cb-blue);color:#fff;border-radius:var(--radius);font-family:inherit;font-size:13px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(27,79,255,.25);transition:background .15s;">View Import Instructions &rarr;</a>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -1140,12 +1150,20 @@ function buildSummary(){
 function generateCSV(){
   const btn=document.getElementById('btnGenerate');btn.disabled=true;
   const prog=document.getElementById('genProgress');prog.classList.add('active');
+  document.getElementById('importInstructions').style.display='none';
   updProg(5,'Initializing...');
   setTimeout(()=>{
     try{
       const csv=buildCSV();
       updProg(100,'Complete \u2014 downloading file...');
-      setTimeout(()=>{dlCSV(csv);btn.disabled=false;setTimeout(()=>prog.classList.remove('active'),2000)},500);
+      setTimeout(()=>{
+        dlCSV(csv);
+        btn.disabled=false;
+        setTimeout(()=>{
+          prog.classList.remove('active');
+          document.getElementById('importInstructions').style.display='block';
+        },1500);
+      },500);
     }catch(e){showErr('Error: '+e.message);btn.disabled=false;prog.classList.remove('active')}
   },100);
 }
