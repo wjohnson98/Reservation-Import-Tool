@@ -1040,7 +1040,6 @@ function init(){
   renderLanding();
   setupDragDrop();
 
-  // Set default historical date
   const d=new Date(); d.setMonth(d.getMonth()-6);
   document.getElementById('historicalStart').value=d.toISOString().split('T')[0];
 
