@@ -517,8 +517,8 @@ input[type="range"]::-moz-range-thumb {
         <label class="toggle"><input type="checkbox" id="togglePending"><div class="toggle-track"></div></label>
       </div>
       <div class="toggle-row">
-        <div class="toggle-info"><h4>Include OTA-sourced reservations?</h4><p>Add bookings from channels like Booking.com, Expedia, etc.</p></div>
-        <label class="toggle"><input type="checkbox" id="toggleOTA"><div class="toggle-track"></div></label>
+        <div class="toggle-info"><h4>Include reservation notes?</h4><p>~12% of reservations will have realistic guest notes attached</p></div>
+        <label class="toggle"><input type="checkbox" id="toggleNotes"><div class="toggle-track"></div></label>
       </div>
       <div class="divider"></div>
       <div class="row">
@@ -554,17 +554,6 @@ input[type="range"]::-moz-range-thumb {
         <div class="source-add-row">
           <input type="text" id="directSourceInput" placeholder="e.g. Website/Booking Engine">
           <button class="primary" onclick="addSource('direct')">Add</button>
-        </div>
-      </div>
-      <div id="otaSourceSection" style="display:none">
-        <div class="divider"></div>
-        <div class="row">
-          <label class="field-label">OTA Sources</label>
-          <div class="chip-list" id="otaChips"></div>
-          <div class="source-add-row">
-            <input type="text" id="otaSourceInput" placeholder="e.g. Booking.com">
-            <button class="primary" onclick="addSource('ota')">Add</button>
-          </div>
         </div>
       </div>
       <div class="tip">Source names should match the reservation sources configured in your Cloudbeds property settings.</div>
@@ -638,7 +627,8 @@ input[type="range"]::-moz-range-thumb {
 const STORAGE_KEY = 'cb_saved_imports';
 let currentStep=1, rooms=[];
 let directSources=['Website/Booking Engine','Walk-In','Phone','Email'];
-let otaSources=['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
+
+const NOTES_LIBRARY=["Traveling with a newborn","Guest requests first floor","Late arrival after 2am","Guest requests no feather pillows","Bringing a dog, prefers first floor","Guest prefers minimal interaction","Early check-in requested","Late check-out requested","Celebrating anniversary","Celebrating birthday","Honeymoon stay","Needs quiet room away from elevator","Light sleeper, requests quiet location","Prefers high floor","Requests connecting rooms","Traveling with elderly parent","Requires ADA accessible room","Wheelchair user","Needs walk-in shower","Requests bathtub","Allergic to strong cleaning products","Allergic to pets","Requests hypoallergenic bedding","Business traveler, needs workspace","Requires strong WiFi for meetings","Checking in very late, hold room","VIP guest, repeat stay","Frequent guest, prefers same room if available","First-time guest","Traveling with infant, needs crib","Needs rollaway bed","Extra towels requested","Extra pillows requested","Requests firm pillows","Requests soft pillows","Prefers corner room","Requests room near elevator","Requests room far from elevator","Sensitive to noise","Sensitive to light, blackout curtains preferred","Traveling for wedding","Part of wedding block","Traveling for funeral","Traveling for medical appointment","Requires refrigerator for medication","Requires microwave","Needs luggage assistance on arrival","Needs luggage assistance on departure","Arriving by taxi","Parking needed","Bringing oversized vehicle","Bringing motorcycle","Traveling with service animal","Bringing multiple pets","Prefers feather-free room","Requests daily housekeeping","Requests no housekeeping during stay","Eco-conscious guest, minimal linen changes","Requests extra blankets","Requests room with view","Requests city view","Requests pool view","Requests away from pool area","Requests room near pool","Requests room near gym","Needs early breakfast","Requires grab-and-go breakfast","Gluten-free preference","Vegan preference","Dairy allergy noted","Peanut allergy noted","Celebrating engagement","Surprise setup requested","Flowers in room requested","Champagne in room requested","Traveling with children","Needs adjoining rooms for family","Teen travelers, requests WiFi priority","Sports team guest","Requests quiet hours accommodation","Night shift worker, daytime sleeper","Requests wake-up call","Multiple wake-up calls requested","Prefers digital check-in","Prefers mobile key","Requests printed folio at checkout","Company paying for stay","Tax exempt guest","Needs split folio","Will arrive before room is ready","Returning guest, had issue last stay","Requests extra hangers","Bringing bicycle, needs storage","Requests airport shuttle","Flight arrives late, possible delay","Flight departs early morning","Prefers contactless service","Traveling solo, safety-conscious","Requests room near front desk","Guest celebrating retirement"];
 let loadedPropertyName = '';
 
 const FN=["James","Michael","Robert","William","David","John","Joseph","Charles","Thomas","Daniel","Matthew","Anthony","Christopher","Joshua","Andrew","Ryan","Kevin","Brian","Jason","Eric","Adam","Justin","Steven","Paul","Brandon","Kyle","Nathan","Aaron","Zachary","Tyler","Emma","Olivia","Ava","Isabella","Sophia","Mia","Charlotte","Amelia","Harper","Evelyn","Abigail","Emily","Elizabeth","Sofia","Avery","Ella","Scarlett","Grace","Chloe","Victoria","Riley","Aria","Lily","Aubrey","Zoey","Hannah","Layla","Nora","Camila","Luna","Penelope","Leah","Madelyn","Stella","Hazel","Ellie","Paisley","Audrey","Skylar","Violet","Claire","Bella","Aurora","Savannah","Brooklyn","Aaliyah","Gabriella","Sadie","Ariana","Genesis","Naomi","Elena","Caroline","Kennedy","Maya","Willow","Kinsley","Mackenzie","Ruby","Gianna","Makayla","Kylie","Morgan","Allison","Faith","Alexandra","Alice","Alexa","Jasmine","Eva","Sarah","Madeline","Lydia","Piper","Natalie","Adeline","Serenity","Taylor","Eliana","Hailey","Brianna","Bailey","Andrea","Katherine","Melody","Lauren","Autumn","Nevaeh","Reagan","Samantha","Anna","Josephine","Ivy","Valentina","Lucy","Maria","Liam","Noah","Oliver","Elijah","Lucas","Mason","Logan","Alexander","Ethan","Jacob","Henry","Sebastian","Jack","Aiden","Owen","Samuel","Benjamin","Leo","Levi","Caleb","Dylan","Luke","Gabriel","Julian","Isaac","Lincoln","Carter","Jayden","Connor","Mateo","Wyatt","Jeremiah","Nolan","Easton","Christian","Hunter","Jonathan","Asher","Cameron","Adrian","Miles","Eli","Theodore","Grayson","Ian","Landon","Xavier","Kai","Carson","Jaxon","Ezra","Colton","Cooper","Everett","Parker","Dominic","Nathaniel","Max","Harrison","Axel","Brooks","Bentley","Emerson","Declan","Tristan","Brody","Gavin","Maxwell","Rowan","Damian","Micah","Weston","Jorge","Felix","Patrick","Sean","Alan","Marcus","Jesse","Grant","Victor","Derek","Peter","Vincent","Raymond","Cole","Troy","Philip","Mitchell","Oscar","Eduardo","Wesley","Andre","Travis","Dustin","Scott","Brady","Finn","Archer","Milo","Jasper","Hugo","Silas"];
@@ -697,7 +687,6 @@ function startNewImport(){
   matrixData = null;
   useMatrixInventory = false;
   directSources = ['Website/Booking Engine','Walk-In','Phone','Email'];
-  otaSources = ['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
   addRoom(); addRoom();
   renderChips();
   resetConfigDefaults();
@@ -737,7 +726,6 @@ function loadSavedImport(name){
 
   // Restore sources
   directSources = cfg.directSources||['Website/Booking Engine','Walk-In','Phone','Email'];
-  otaSources = cfg.otaSources||['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
   renderChips();
 
   // Restore config
@@ -745,7 +733,7 @@ function loadSavedImport(name){
   toggleCond('historicalDate', !!cfg.historical);
   if(cfg.historicalStart) document.getElementById('historicalStart').value = cfg.historicalStart;
   document.getElementById('togglePending').checked = !!cfg.pending;
-  document.getElementById('toggleOTA').checked = !!cfg.ota;
+  document.getElementById('toggleNotes').checked = !!cfg.notes;
   document.getElementById('numDays').value = cfg.numDays||90;
   document.getElementById('occSlider').value = cfg.occupancy||65;
   updateOcc();
@@ -768,7 +756,7 @@ function resetConfigDefaults(){
   const d=new Date(); d.setMonth(d.getMonth()-6);
   document.getElementById('historicalStart').value = d.toISOString().split('T')[0];
   document.getElementById('togglePending').checked = false;
-  document.getElementById('toggleOTA').checked = false;
+  document.getElementById('toggleNotes').checked = false;
   document.getElementById('numDays').value = 90;
   document.getElementById('occSlider').value = 65;
   updateOcc();
@@ -811,11 +799,10 @@ function confirmSave(){
   saved[name] = {
     rooms: rooms.map(r=>({name:r.name, rate:r.rate, count:r.count})),
     directSources: [...directSources],
-    otaSources: [...otaSources],
     historical: document.getElementById('toggleHistorical').checked,
     historicalStart: document.getElementById('historicalStart').value,
     pending: document.getElementById('togglePending').checked,
-    ota: document.getElementById('toggleOTA').checked,
+    notes: document.getElementById('toggleNotes').checked,
     numDays: parseInt(document.getElementById('numDays').value)||90,
     occupancy: parseInt(document.getElementById('occSlider').value)||65,
     savedAt: new Date().toISOString()
@@ -1049,7 +1036,6 @@ function init(){
   document.getElementById('historicalStart').value=d.toISOString().split('T')[0];
 
   document.getElementById('directSourceInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSource('direct')});
-  document.getElementById('otaSourceInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSource('ota')});
   document.getElementById('savePropertyName').addEventListener('keydown',e=>{if(e.key==='Enter')confirmSave()});
 }
 
@@ -1071,7 +1057,6 @@ function goToStep(s){
   }}
   if(s>3&&directSources.length===0){showErr('Please add at least one booking source.');return}
   clearErr();
-  if(s===3)document.getElementById('otaSourceSection').style.display=document.getElementById('toggleOTA').checked?'block':'none';
   if(s===4)buildSummary();
   document.querySelectorAll('.step-section').forEach(el=>el.classList.remove('active'));
   document.getElementById('step'+s).classList.add('active');
@@ -1115,15 +1100,14 @@ function renderRooms(){
 }
 
 function addSource(t){
-  const iid=t==='direct'?'directSourceInput':'otaSourceInput',inp=document.getElementById(iid),v=inp.value.trim();
+  const inp=document.getElementById('directSourceInput'),v=inp.value.trim();
   if(!v)return;
-  if(t==='direct'){if(!directSources.includes(v))directSources.push(v)}else{if(!otaSources.includes(v))otaSources.push(v)}
+  if(!directSources.includes(v))directSources.push(v);
   inp.value='';renderChips();
 }
-function removeSource(t,i){if(t==='direct')directSources.splice(i,1);else otaSources.splice(i,1);renderChips()}
+function removeSource(t,i){directSources.splice(i,1);renderChips()}
 function renderChips(){
   document.getElementById('directChips').innerHTML=directSources.map((s,i)=>`<span class="chip">${esc(s)}<button class="chip-remove" onclick="removeSource('direct',${i})">&times;</button></span>`).join('');
-  document.getElementById('otaChips').innerHTML=otaSources.map((s,i)=>`<span class="chip ota">${esc(s)}<button class="chip-remove" onclick="removeSource('ota',${i})">&times;</button></span>`).join('');
 }
 
 function toggleCond(id,show){document.getElementById(id).classList.toggle('open',show)}
@@ -1136,7 +1120,7 @@ function buildSummary(){
     occ=parseInt(document.getElementById('occSlider').value),
     hist=document.getElementById('toggleHistorical').checked,
     pend=document.getElementById('togglePending').checked,
-    ota=document.getElementById('toggleOTA').checked,
+    notes=document.getElementById('toggleNotes').checked,
     est=Math.round(tot*nd*(occ/100)/2.5);
   document.getElementById('summaryGrid').innerHTML=`
     <div class="summary-stat"><div class="stat-label">Room Types</div><div class="stat-value">${rooms.length}</div></div>
@@ -1147,12 +1131,11 @@ function buildSummary(){
     <div class="summary-stat"><div class="stat-label">Features</div><div class="feature-tags">
       ${hist?'<span class="feature-tag">Historical</span>':''}
       ${pend?'<span class="feature-tag orange">Pending</span>':''}
-      ${ota?'<span class="feature-tag green">OTA</span>':''}
-      ${!hist&&!pend&&!ota?'<span class="feature-tag">Standard</span>':''}
+      ${notes?'<span class="feature-tag green">Notes</span>':''}
+      ${!hist&&!pend&&!notes?'<span class="feature-tag">Standard</span>':''}
     </div></div>`;
   document.getElementById('roomSummaryBody').innerHTML=rooms.map(r=>`<tr><td>${esc(r.name)}</td><td style="text-align:right">$${r.rate.toFixed(2)}</td><td style="text-align:right">${r.count}</td></tr>`).join('');
-  const all=[...directSources,...(ota?otaSources:[])];
-  document.getElementById('sourceSummaryChips').innerHTML=all.map(s=>`<span class="chip">${esc(s)}</span>`).join('');
+  document.getElementById('sourceSummaryChips').innerHTML=directSources.map(s=>`<span class="chip">${esc(s)}</span>`).join('');
 }
 
 function generateCSV(){
@@ -1175,30 +1158,25 @@ function buildCSV(){
     hist=document.getElementById('toggleHistorical').checked,
     hs=document.getElementById('historicalStart').value,
     incP=document.getElementById('togglePending').checked,
-    incO=document.getElementById('toggleOTA').checked;
+    incN=document.getElementById('toggleNotes').checked;
   const today=new Date();today.setHours(0,0,0,0);
+  const bookingDate = fD(today); // All reservations use today as booking date
   let sd;if(hist&&hs)sd=new Date(hs+'T00:00:00');else sd=new Date(today);
   const ed=new Date(today);ed.setDate(ed.getDate()+nd);
   const totD=Math.round((ed-sd)/(864e5));
   updProg(10,'Building inventory grid...');
 
-  // Build inventory grid — use matrix availability if available, otherwise fixed count
+  // Build inventory grid
   const inv={};
   if(useMatrixInventory && matrixData){
-    // Matrix availability: use actual per-day sellable quantities
     const matrixDays = matrixData.dates.length;
     matrixData.rooms.forEach((mr,idx)=>{
       const rateInp = document.getElementById('matrixRate_'+idx);
       const rate = rateInp ? parseFloat(rateInp.value)||mr.avgRate : mr.avgRate;
-      // Update rooms array rate
       const room = rooms.find(r=>r.name===mr.name);
       if(room) room.rate = rate;
-
       const arr = new Array(totD).fill(0);
-      for(let d=0; d<totD && d<matrixDays; d++){
-        arr[d] = mr.availability[d] || 0;
-      }
-      // For days beyond matrix data, use the average availability
+      for(let d=0; d<totD && d<matrixDays; d++) arr[d] = mr.availability[d] || 0;
       if(totD > matrixDays){
         const avg = Math.round(mr.availability.reduce((a,b)=>a+b,0)/matrixDays);
         for(let d=matrixDays; d<totD; d++) arr[d] = avg;
@@ -1209,13 +1187,10 @@ function buildCSV(){
     rooms.forEach(r=>{inv[r.name]=new Array(totD).fill(r.count)});
   }
 
-  const allSrc=[...directSources];if(incO)allSrc.push(...otaSources);
+  const allSrc=[...directSources];
 
-  // Calculate target room-nights based on actual available inventory
   let totalAvailableRN = 0;
-  for(const name in inv){
-    totalAvailableRN += inv[name].reduce((a,b)=>a+b,0);
-  }
+  for(const name in inv) totalAvailableRN += inv[name].reduce((a,b)=>a+b,0);
   const tgtRN = Math.round(totalAvailableRN * occT);
 
   updProg(20,'Generating reservations...');
@@ -1231,27 +1206,88 @@ function buildCSV(){
     if(!ok)continue;
     for(let d=ci;d<co;d++)inv[rt.name][d]--;
     used+=nn;
+
     const cid=new Date(sd);cid.setDate(cid.getDate()+ci);
     const cod=new Date(sd);cod.setDate(cod.getDate()+co);
-    const bo=Math.floor(Math.random()*89)+1;
-    const db=new Date(cid);db.setDate(db.getDate()-bo);
-    const fn=FN[ni%FN.length],ln=LN[(ni+37)%LN.length];ni++;
-    const name=fn+' '+ln;
+
+    // Guest name
+    const fn=FN[ni%FN.length], ln=LN[(ni+37)%LN.length]; ni++;
     const email='fakeguest.'+fn.toLowerCase()+'.'+ln.toLowerCase()+'@cloudbeds.com';
-    const rn=Math.floor(Math.random()*9e12+1e12).toString();
-    const ad=[1,1,1,1,2,2,2,3][Math.floor(Math.random()*8)];
-    const ch=Math.random()<.15?Math.floor(Math.random()*3)+1:0;
-    let st='Confirmed';if(incP&&Math.random()<.12)st='Confirmation Pending';
+
+    // Adults / Children
+    const adults=[1,1,1,1,2,2,2,3][Math.floor(Math.random()*8)];
+    const children=Math.random()<.15?Math.floor(Math.random()*3)+1:0;
+
+    // Status: checked_out for historical (before today), confirmed for future
+    const isHistorical = cid < today;
+    let status = 'confirmed';
+    if(isHistorical) status = 'checked_out';
+    else if(incP && Math.random()<.12) status = 'not_confirmed';
+
+    // Source
     const src=allSrc[Math.floor(Math.random()*allSrc.length)];
-    const gt=(rt.rate*nn).toFixed(2);
-    const pr=Math.random();let ap,bd;
-    if(pr<.5){ap='0.00';bd=gt}else if(pr<.85){ap=gt;bd='0.00'}
-    else{const pt=(parseFloat(gt)*(Math.random()*.6+.2)).toFixed(2);ap=pt;bd=(parseFloat(gt)-parseFloat(pt)).toFixed(2)}
-    res.push([name,email,' ',rn,fD(db),fD(cid),fD(cod),rt.name,rt.rate,rt.name+':'+rt.rate,nn,ad,ch,st,rt.name,gt,ap,bd,src,'']);
+
+    // Notes: ~12% of reservations get a random note
+    let note = '';
+    if(incN && Math.random() < 0.12){
+      note = NOTES_LIBRARY[Math.floor(Math.random()*NOTES_LIBRARY.length)];
+    }
+
+    // Col R: #customerfname... = firstnamelastname + 4609046092
+    const colR = fn.toLowerCase() + ln.toLowerCase() + '4609046092';
+
+    // Col S: #N/A = Cash:bookingdate:0
+    const colS = 'Cash:' + bookingDate + ':0';
+
+    // Col N: Room Type = RoomName:1
+    const roomTypeCol = rt.name + ':1';
+
+    // Col Q: RoomRates = RoomName:Rate
+    const roomRatesCol = rt.name + ':' + rt.rate;
+
+    // Build row matching exact header order:
+    res.push([
+      fn,                    // A: #CustomerFName
+      ln,                    // B: CustomerLName
+      email,                 // C: CustomerEmail
+      '',                    // D: CustomerPhone
+      '',                    // E: CustomerAddress1
+      '',                    // F: CustomerAddress2
+      'US',                  // G: CustomerCountryCode
+      '',                    // H: CustomerState
+      '',                    // I: CustomerCity
+      '',                    // J: CustomerZip
+      '',                    // K: ThirdPartyReservationNumber
+      fD(cid),               // L: CheckInDate
+      fD(cod),               // M: CheckOutDate
+      roomTypeCol,           // N: Room Type (RoomName:1)
+      adults,                // O: Adults
+      children,              // P: Children
+      roomRatesCol,          // Q: RoomRates (RoomName:Rate)
+      colR,                  // R: #customerfname...
+      colS,                  // S: #N/A (Cash:date:0)
+      src.toLowerCase(),     // T: Source (lowercase)
+      status,                // U: Status
+      note,                  // V: Notes
+      bookingDate            // W: Booking Date
+    ]);
+
     if(res.length%100===0)updProg(20+Math.min(70,(used/tgtRN)*70),'Generated '+res.length+' reservations...');
   }
+
   updProg(92,'Building CSV \u2014 '+res.length+' reservations...');
-  const hdr=['Name','Email','Phone Number','Reservation Number','Date Booked','Check-in Date','Check-out Date','Room Type','Rate',rooms[0].name+':'+rooms[0].rate.toFixed(5),'Number of Nights','Adults','Children','Status','Room Type','Grand Total','Amount Paid','Balance Due','Source','Notes'];
+
+  // Exact headers from Cloudbeds import template
+  const hdr=[
+    '#CustomerFName','CustomerLName','CustomerEmail','CustomerPhone',
+    'CustomerAddress1','CustomerAddress2','CustomerCountryCode',
+    'CustomerState','CustomerCity','CustomerZip',
+    'ThirdPartyReservationNumber','CheckInDate','CheckOutDate',
+    'Room Type','Adults','Children','RoomRates',
+    '#customerfnamecustomerlnamecheckindatecheckoutdatethirdpartyreservationnumber',
+    '#N/A','Source','Status','Notes','Booking Date'
+  ];
+
   let csv=hdr.map(cE).join(',')+'\n';
   res.forEach(r=>{csv+=r.map(v=>cE(String(v))).join(',')+'\n'});
   return csv;
