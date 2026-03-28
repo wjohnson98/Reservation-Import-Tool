@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cloudbeds Reservation Import Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --cb-blue:       #1B4FFF;
@@ -435,25 +436,46 @@ input[type="range"]::-moz-range-thumb {
     <div class="panel">
       <div class="panel-header">
         <h2>Configure Room Types</h2>
-        <p>Upload a screenshot of your Cloudbeds Accommodations page, or add room types manually below.</p>
+        <p>Import your Availability Matrix report from Cloudbeds, or add room types manually.</p>
       </div>
 
-      <!-- Screenshot upload -->
+      <!-- Import option: Availability Matrix -->
+      <div class="section-label">Quick Import &mdash; Availability Matrix</div>
       <div id="uploadZone" class="upload-zone">
         <div class="upload-icon">
           <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3m4-5l3-3m0 0l3 3m-3-3v9" fill="none" stroke="#1B4FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
-        <div class="upload-title">Upload Accommodations Screenshot</div>
-        <div class="upload-sub">Drag &amp; drop or click to upload &mdash; PNG, JPG supported</div>
-        <input type="file" id="screenshotFile" accept="image/png,image/jpeg,image/webp" onchange="handleScreenshot(this.files[0])">
+        <div class="upload-title">Upload Availability Matrix (.xlsx)</div>
+        <div class="upload-sub">Export from Cloudbeds &rarr; Drag &amp; drop or click to upload</div>
+        <input type="file" id="matrixFile" accept=".xlsx,.xls" onchange="handleMatrixUpload(this.files[0])">
       </div>
       <div id="uploadProcessing" class="upload-processing" style="display:none;">
         <div class="spinner"></div>
-        <span>Analyzing screenshot with AI&hellip;</span>
+        <span>Parsing availability matrix&hellip;</span>
+      </div>
+      <div class="muted" style="margin-top:8px;">Don't know how to export? <a href="https://scribehow.com/viewer/How_to_Export_Availability_Matrix_Data_to_Excel__FQPjqZZPRS2JyIAnC49q3Q" target="_blank" style="color:var(--cb-blue);font-weight:600;">View step-by-step guide &rarr;</a></div>
+
+      <!-- Matrix confirmation panel (hidden until file parsed) -->
+      <div id="matrixConfirm" style="display:none;">
+        <div class="divider"></div>
+        <div class="section-label">Confirm Room Types &amp; Set Rates</div>
+        <div class="muted" style="margin-bottom:8px;">We extracted these room types from your report. The average nightly rate is pre-filled &mdash; adjust if needed.</div>
+        <table id="matrixTable">
+          <thead><tr>
+            <th style="width:40%">Accommodation Name</th>
+            <th style="width:15%">Total Rooms</th>
+            <th style="width:15%">Avg Rate</th>
+            <th style="width:20%">Nightly Rate ($)</th>
+            <th style="width:10%"></th>
+          </tr></thead>
+          <tbody id="matrixTableBody"></tbody>
+        </table>
+        <div id="matrixDateRange" class="tip" style="margin-top:12px;"></div>
       </div>
 
       <div class="or-divider">or add manually</div>
 
+      <!-- Manual entry -->
       <table id="roomTable">
         <thead><tr>
           <th style="width:45%">Accommodation Name</th>
@@ -464,7 +486,7 @@ input[type="range"]::-moz-range-thumb {
         <tbody id="roomTableBody"></tbody>
       </table>
       <button class="btn-add" onclick="addRoom()"><span style="font-size:16px">+</span> Add Room Type</button>
-      <div class="tip">Room type names must match exactly what is configured in Cloudbeds. Rates still need to be entered manually after screenshot import.</div>
+      <div class="tip">Room type names must match exactly what is configured in Cloudbeds.</div>
     </div>
     <div class="btns btns-between">
       <button class="ghost" onclick="backToLanding()">&larr; Home</button>
@@ -672,13 +694,24 @@ function renderLanding(){
 function startNewImport(){
   loadedPropertyName = '';
   rooms = [];
+  matrixData = null;
+  useMatrixInventory = false;
   directSources = ['Website/Booking Engine','Walk-In','Phone','Email'];
   otaSources = ['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
   addRoom(); addRoom();
   renderChips();
   resetConfigDefaults();
+  resetMatrixUI();
   showWizard();
   goToStep(1);
+}
+
+function resetMatrixUI(){
+  document.getElementById('matrixConfirm').style.display = 'none';
+  const manualTable = document.getElementById('roomTable');
+  if(manualTable) manualTable.style.display = '';
+  const addBtn = document.querySelector('.btn-add');
+  if(addBtn) addBtn.style.display = '';
 }
 
 function loadSavedImport(name){
@@ -687,6 +720,11 @@ function loadSavedImport(name){
   if(!cfg){ showErr('Saved property not found.'); return; }
 
   loadedPropertyName = name;
+
+  // Reset matrix state — saved imports use manual config
+  matrixData = null;
+  useMatrixInventory = false;
+  resetMatrixUI();
 
   // Restore rooms
   rooms = [];
@@ -742,6 +780,8 @@ function showWizard(){
 }
 
 function backToLanding(){
+  matrixData = null;
+  useMatrixInventory = false;
   document.getElementById('wizardWrap').style.display = 'none';
   document.getElementById('landingPage').style.display = 'block';
   renderLanding();
@@ -798,115 +838,182 @@ function confirmSave(){
 }
 
 // ═══════════════════════════════════════════
-// SCREENSHOT IMPORT (Anthropic Vision API)
+// AVAILABILITY MATRIX IMPORT
 // ═══════════════════════════════════════════
-async function handleScreenshot(file){
+let matrixData = null; // {rooms: [{name, totalRooms, avgRate, availability:[...]}], dates:[...]}
+let useMatrixInventory = false;
+
+async function handleMatrixUpload(file){
   if(!file) return;
-  if(!file.type.startsWith('image/')){
-    showErr('Please upload an image file (PNG, JPG).'); return;
-  }
+  clearErr();
 
   const zone = document.getElementById('uploadZone');
   const proc = document.getElementById('uploadProcessing');
   zone.style.display = 'none';
   proc.style.display = 'flex';
-  clearErr();
 
   try {
-    // Convert to base64
-    const base64 = await fileToBase64(file);
-    const mediaType = file.type;
+    const arrayBuf = await file.arrayBuffer();
+    const data = parseMatrixXLSX(arrayBuf);
 
-    // Call Anthropic API with vision
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mediaType, data: base64 }
-            },
-            {
-              type: "text",
-              text: `Look at this screenshot from a Cloudbeds PMS Accommodations page. Extract ONLY the accommodation types from the table.
+    if(!data.rooms.length) throw new Error('No room types found in the file.');
 
-For each accommodation row, extract:
-- "name": the exact accommodation name text (e.g. "Standard King", "Deluxe Suite with Resort View")
-- "count": the number from the TOTAL ACCOMMODATIONS column (the last numeric column). If you cannot find it, use the UNITS column instead.
+    matrixData = data;
+    useMatrixInventory = true;
+    renderMatrixConfirm(data);
 
-IMPORTANT RULES:
-- Skip any row that says "TOTAL" — that is the summary row, not a room type.
-- Skip any room type that has "Day Use" in the name — these are not overnight accommodations.
-- Skip any room type that contains "FLEX" or "ANYTHING GOES" — these are virtual room types.
-- Return ONLY valid JSON, no markdown, no backticks, no preamble.
-
-Return a JSON array like: [{"name":"Standard King","count":10},{"name":"Deluxe King","count":10}]`
-            }
-          ]
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const text = (data.content||[]).map(b=>b.text||'').join('').trim();
-    const clean = text.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(clean);
-
-    if(!Array.isArray(parsed) || parsed.length === 0){
-      throw new Error('No accommodations found in the screenshot.');
-    }
-
-    // Clear existing empty rows and populate
-    rooms = [];
-    parsed.forEach(item => {
-      const id = Date.now()+Math.random();
-      rooms.push({
-        id,
-        name: (item.name||'').trim(),
-        rate: 0,  // User must fill in rates
-        count: parseInt(item.count)||0
-      });
-    });
-    renderRooms();
-
-    // Show success state
     zone.style.display = 'block';
     proc.style.display = 'none';
+    document.getElementById('matrixFile').value = '';
 
-    // Brief success flash on the zone
+    // Success flash
     zone.style.borderColor = 'var(--cb-green)';
     zone.style.background = 'var(--cb-green-light)';
-    zone.querySelector('.upload-title').textContent = parsed.length + ' room types imported!';
-    zone.querySelector('.upload-sub').textContent = 'Add nightly rates below, then continue.';
+    zone.querySelector('.upload-title').textContent = data.rooms.length + ' room type' + (data.rooms.length!==1?'s':'') + ' found!';
+    zone.querySelector('.upload-sub').textContent = 'Confirm room types and rates below.';
     setTimeout(()=>{
       zone.style.borderColor = '';
       zone.style.background = '';
-      zone.querySelector('.upload-title').textContent = 'Upload Accommodations Screenshot';
-      zone.querySelector('.upload-sub').textContent = 'Drag & drop or click to upload — PNG, JPG supported';
+      zone.querySelector('.upload-title').textContent = 'Upload Availability Matrix (.xlsx)';
+      zone.querySelector('.upload-sub').textContent = 'Export from Cloudbeds → Drag & drop or click to upload';
     }, 4000);
-
-    // Reset file input
-    document.getElementById('screenshotFile').value = '';
 
   } catch(e) {
     zone.style.display = 'block';
     proc.style.display = 'none';
-    document.getElementById('screenshotFile').value = '';
-    showErr('Screenshot import failed: ' + (e.message||e));
+    document.getElementById('matrixFile').value = '';
+    showErr('Import failed: ' + (e.message||e));
   }
 }
 
-function fileToBase64(file){
-  return new Promise((res,rej)=>{
-    const r = new FileReader();
-    r.onload = ()=> res(r.result.split(',')[1]);
-    r.onerror = ()=> rej(new Error('Failed to read file'));
-    r.readAsDataURL(file);
+function parseMatrixXLSX(arrayBuf){
+  // Use SheetJS-style parsing with a lightweight approach
+  // We'll parse the XLSX in the browser using the embedded parser
+  const workbook = XLSX.read(new Uint8Array(arrayBuf), {type:'array'});
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+
+  if(raw.length < 3) throw new Error('File appears empty or malformed.');
+
+  // Row 1 (index 1) = dates
+  const dateRow = raw[1];
+  const dates = [];
+  for(let c=2; c<dateRow.length; c++){
+    const v = String(dateRow[c]||'').trim();
+    if(v && v !== '          ') dates.push(v);
+  }
+
+  // Parse room blocks: every 3 rows = one room type
+  // Row pattern: [Name\nN Rooms] [Sellable Quantity] [values...]
+  //              []               [Remaining Inventory] [values...]
+  //              []               [Base Rate]           [values...]
+  const roomTypes = [];
+  const seenBaseNames = new Set();
+
+  for(let r=2; r<raw.length; r++){
+    const cellA = String(raw[r][0]||'').trim();
+    const cellB = String(raw[r][1]||'').trim();
+
+    if(!cellA || cellA === '          ') continue;
+    if(cellB.toLowerCase() !== 'sellable quantity') continue;
+
+    // Parse name: "Classic King \n 25 Rooms"
+    const nameParts = cellA.split('\n').map(s=>s.trim());
+    let roomName = nameParts[0];
+
+    // Extract total rooms from "25 Rooms"
+    let totalRooms = 0;
+    if(nameParts.length > 1){
+      const m = nameParts[1].match(/(\d+)\s*rooms?/i);
+      if(m) totalRooms = parseInt(m[1]);
+    }
+
+    // Check if this is a rate plan variant (has parentheses)
+    // Base room types: "Classic King", "Executive King Suite"
+    // Rate plans: "Classic King(Non-Refundable)", "Classic King(AAA Discount)"
+    if(roomName.includes('(')) continue;
+
+    // Skip if we already have this base name
+    if(seenBaseNames.has(roomName)) continue;
+    seenBaseNames.add(roomName);
+
+    // Extract sellable quantity per day
+    const availability = [];
+    for(let c=2; c<2+dates.length; c++){
+      availability.push(parseInt(raw[r][c])||0);
+    }
+
+    // Extract base rates (2 rows down from sellable quantity)
+    const rates = [];
+    if(r+2 < raw.length && String(raw[r+2][1]||'').trim().toLowerCase() === 'base rate'){
+      for(let c=2; c<2+dates.length; c++){
+        const rv = parseFloat(raw[r+2][c]);
+        if(!isNaN(rv)) rates.push(rv);
+      }
+    }
+
+    const avgRate = rates.length ? Math.round(rates.reduce((a,b)=>a+b,0)/rates.length) : 0;
+
+    roomTypes.push({name:roomName, totalRooms, avgRate, availability});
+  }
+
+  return {rooms:roomTypes, dates};
+}
+
+function renderMatrixConfirm(data){
+  const container = document.getElementById('matrixConfirm');
+  const tbody = document.getElementById('matrixTableBody');
+  container.style.display = 'block';
+
+  // Hide manual entry section since matrix is loaded
+  document.getElementById('roomTable').closest('table').style.display = 'none';
+  document.querySelector('.btn-add').style.display = 'none';
+
+  tbody.innerHTML = data.rooms.map((r,i) => `<tr>
+    <td><strong>${esc(r.name)}</strong></td>
+    <td style="text-align:center;">${r.totalRooms}</td>
+    <td style="text-align:center;color:var(--cb-muted);">$${r.avgRate}</td>
+    <td><input type="number" id="matrixRate_${i}" placeholder="${r.avgRate}" value="${r.avgRate}" min="0" step="0.01"></td>
+    <td style="text-align:center;"><button class="btn-remove" onclick="removeMatrixRoom(${i})">&times;</button></td>
+  </tr>`).join('');
+
+  document.getElementById('matrixDateRange').innerHTML =
+    '<strong>Date range:</strong> ' + data.dates[0] + ' to ' + data.dates[data.dates.length-1] +
+    ' (' + data.dates.length + ' days) &mdash; Availability data will be used instead of fixed room counts.';
+
+  // Sync to rooms array
+  syncMatrixToRooms();
+}
+
+function removeMatrixRoom(index){
+  if(!matrixData) return;
+  matrixData.rooms.splice(index,1);
+  if(matrixData.rooms.length === 0){
+    clearMatrixImport();
+    return;
+  }
+  renderMatrixConfirm(matrixData);
+}
+
+function clearMatrixImport(){
+  matrixData = null;
+  useMatrixInventory = false;
+  document.getElementById('matrixConfirm').style.display = 'none';
+  document.getElementById('roomTable').closest('table').style.display = '';
+  document.querySelector('.btn-add').style.display = '';
+}
+
+function syncMatrixToRooms(){
+  if(!matrixData) return;
+  rooms = matrixData.rooms.map((r,i) => {
+    const rateInput = document.getElementById('matrixRate_'+i);
+    const rate = rateInput ? parseFloat(rateInput.value)||r.avgRate : r.avgRate;
+    return {
+      id: Date.now()+Math.random()+i,
+      name: r.name,
+      rate: rate,
+      count: r.totalRooms
+    };
   });
 }
 
@@ -926,7 +1033,7 @@ function setupDragDrop(){
   });
   zone.addEventListener('drop', e=>{
     const file = e.dataTransfer?.files?.[0];
-    if(file) handleScreenshot(file);
+    if(file) handleMatrixUpload(file);
   });
 }
 
@@ -947,11 +1054,20 @@ function init(){
 }
 
 function goToStep(s){
+  // Sync matrix rates if using matrix import
+  if(s>1 && useMatrixInventory && matrixData){
+    syncMatrixToRooms();
+    // Update rates from input fields
+    matrixData.rooms.forEach((r,i)=>{
+      const inp = document.getElementById('matrixRate_'+i);
+      if(inp) r.userRate = parseFloat(inp.value)||r.avgRate;
+    });
+  }
   if(s>1&&rooms.length===0){showErr('Please add at least one room type.');return}
   if(s>1){for(const r of rooms){
     if(!r.name.trim()){showErr('All room types need a name.');return}
     if(!r.rate||r.rate<=0){showErr('"'+r.name+'" needs a valid nightly rate.');return}
-    if(!r.count||r.count<=0){showErr('"'+r.name+'" needs a valid room count.');return}
+    if(!useMatrixInventory && (!r.count||r.count<=0)){showErr('"'+r.name+'" needs a valid room count.');return}
   }}
   if(s>3&&directSources.length===0){showErr('Please add at least one booking source.');return}
   clearErr();
@@ -1065,9 +1181,43 @@ function buildCSV(){
   const ed=new Date(today);ed.setDate(ed.getDate()+nd);
   const totD=Math.round((ed-sd)/(864e5));
   updProg(10,'Building inventory grid...');
-  const inv={};rooms.forEach(r=>{inv[r.name]=new Array(totD).fill(r.count)});
+
+  // Build inventory grid — use matrix availability if available, otherwise fixed count
+  const inv={};
+  if(useMatrixInventory && matrixData){
+    // Matrix availability: use actual per-day sellable quantities
+    const matrixDays = matrixData.dates.length;
+    matrixData.rooms.forEach((mr,idx)=>{
+      const rateInp = document.getElementById('matrixRate_'+idx);
+      const rate = rateInp ? parseFloat(rateInp.value)||mr.avgRate : mr.avgRate;
+      // Update rooms array rate
+      const room = rooms.find(r=>r.name===mr.name);
+      if(room) room.rate = rate;
+
+      const arr = new Array(totD).fill(0);
+      for(let d=0; d<totD && d<matrixDays; d++){
+        arr[d] = mr.availability[d] || 0;
+      }
+      // For days beyond matrix data, use the average availability
+      if(totD > matrixDays){
+        const avg = Math.round(mr.availability.reduce((a,b)=>a+b,0)/matrixDays);
+        for(let d=matrixDays; d<totD; d++) arr[d] = avg;
+      }
+      inv[mr.name] = arr;
+    });
+  } else {
+    rooms.forEach(r=>{inv[r.name]=new Array(totD).fill(r.count)});
+  }
+
   const allSrc=[...directSources];if(incO)allSrc.push(...otaSources);
-  const totR=rooms.reduce((s,r)=>s+r.count,0),tgtRN=Math.round(totR*totD*occT);
+
+  // Calculate target room-nights based on actual available inventory
+  let totalAvailableRN = 0;
+  for(const name in inv){
+    totalAvailableRN += inv[name].reduce((a,b)=>a+b,0);
+  }
+  const tgtRN = Math.round(totalAvailableRN * occT);
+
   updProg(20,'Generating reservations...');
   const res=[];let used=0,ni=0,att=0;const maxA=tgtRN*4;
   while(used<tgtRN&&att<maxA){
@@ -1077,7 +1227,7 @@ function buildCSV(){
     const nn=sw[Math.floor(Math.random()*sw.length)];
     const co=ci+nn;if(co>totD)continue;
     const rt=pickRoom();if(!rt)continue;
-    let ok=true;for(let d=ci;d<co;d++){if(inv[rt.name][d]<=0){ok=false;break}}
+    let ok=true;for(let d=ci;d<co;d++){if(!inv[rt.name]||inv[rt.name][d]<=0){ok=false;break}}
     if(!ok)continue;
     for(let d=ci;d<co;d++)inv[rt.name][d]--;
     used+=nn;
