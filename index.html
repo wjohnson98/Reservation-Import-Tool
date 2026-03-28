@@ -4,733 +4,292 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cloudbeds Reservation Import Generator</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0F1117;
-  --surface: #1A1D27;
-  --surface-hover: #22252F;
-  --border: #2A2D3A;
-  --border-active: #4A6CF7;
-  --text: #E8E9ED;
-  --text-muted: #8B8FA3;
-  --text-dim: #5A5E72;
-  --accent: #4A6CF7;
-  --accent-glow: rgba(74, 108, 247, 0.15);
-  --accent-hover: #5B7BF9;
-  --green: #34D399;
-  --green-dim: rgba(52, 211, 153, 0.12);
-  --orange: #F59E0B;
-  --orange-dim: rgba(245, 158, 11, 0.12);
-  --red: #EF4444;
-  --red-dim: rgba(239, 68, 68, 0.12);
-  --radius: 10px;
-  --radius-lg: 16px;
+  --cb-blue:       #1B4FFF;
+  --cb-blue-dark:  #1340D6;
+  --cb-blue-light: #EEF2FF;
+  --cb-navy:       #0D1F4E;
+  --cb-border:     #D9E1F2;
+  --cb-bg:         #F5F7FB;
+  --cb-text:       #1A1F36;
+  --cb-muted:      #6B7694;
+  --cb-error:      #D72B3F;
+  --cb-white:      #FFFFFF;
+  --cb-green:      #0FA958;
+  --cb-green-light:#EDFBF3;
+  --cb-orange:     #E65100;
+  --cb-orange-light:#FFF3E0;
+  --radius:        8px;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* ── Noise overlay ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ── Top bar ── */
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 32px;
-  background: rgba(15, 17, 23, 0.85);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -0.3px;
-}
-
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, var(--accent), #8B5CF6);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Space Mono', monospace;
-  font-size: 14px;
-  font-weight: 700;
-  color: white;
-}
-
-.topbar-badge {
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--surface);
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-}
-
-/* ── Stepper ── */
-.stepper-wrap {
-  padding: 32px 32px 0;
-  max-width: 900px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 1;
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-.step-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: default;
-}
-
-.step-circle {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Poppins', Arial, sans-serif;
+  background: var(--cb-bg);
+  color: var(--cb-text);
   font-size: 13px;
-  font-weight: 700;
-  border: 2px solid var(--border);
-  color: var(--text-dim);
-  transition: all 0.35s ease;
-  flex-shrink: 0;
-}
-
-.step-item.active .step-circle {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-glow);
-  box-shadow: 0 0 20px rgba(74, 108, 247, 0.2);
-}
-
-.step-item.completed .step-circle {
-  border-color: var(--green);
-  background: var(--green-dim);
-  color: var(--green);
-}
-
-.step-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-dim);
-  transition: color 0.3s;
-  white-space: nowrap;
-}
-
-.step-item.active .step-label { color: var(--text); }
-.step-item.completed .step-label { color: var(--green); }
-
-.step-line {
-  flex: 1;
-  height: 2px;
-  background: var(--border);
-  margin: 0 12px;
-  border-radius: 2px;
-  transition: background 0.4s;
-  min-width: 20px;
-}
-
-.step-line.done {
-  background: var(--green);
-}
-
-/* ── Main container ── */
-.main {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 32px;
-  position: relative;
-  z-index: 1;
-}
-
-/* ── Cards ── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 32px;
-  margin-bottom: 24px;
-}
-
-.card-header {
-  margin-bottom: 28px;
-}
-
-.card-header h2 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-  margin-bottom: 6px;
-}
-
-.card-header p {
-  font-size: 14px;
-  color: var(--text-muted);
   line-height: 1.5;
+  min-height: 100vh;
 }
 
-/* ── Form elements ── */
-.form-group {
-  margin-bottom: 20px;
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px;
+  background: var(--cb-white);
+  border-bottom: 2px solid var(--cb-blue-light);
+  box-shadow: 0 1px 4px rgba(27,79,255,.06);
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 34px; height: 34px; background: var(--cb-blue); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.logo-mark svg { fill: white; }
+.logo-text h1 { font-size: 15px; font-weight: 700; color: var(--cb-navy); line-height: 1.2; }
+.logo-text p { font-size: 11px; color: var(--cb-muted); font-weight: 400; }
+.topbar-badge {
+  font-size: 10px; font-weight: 700; color: var(--cb-blue);
+  background: var(--cb-blue-light); padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: .3px;
 }
 
-.form-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+.stepper-wrap { max-width: 780px; margin: 0 auto; padding: 24px 28px 0; }
+.stepper { display: flex; align-items: center; }
+.step-item { display: flex; align-items: center; gap: 8px; }
+.step-circle {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  border: 2px solid var(--cb-border); color: var(--cb-muted);
+  background: var(--cb-white); transition: all .25s; flex-shrink: 0;
+}
+.step-item.active .step-circle {
+  border-color: var(--cb-blue); color: var(--cb-white);
+  background: var(--cb-blue); box-shadow: 0 2px 8px rgba(27,79,255,.25);
+}
+.step-item.completed .step-circle {
+  border-color: var(--cb-green); color: var(--cb-white); background: var(--cb-green);
+}
+.step-label { font-size: 12px; font-weight: 600; color: var(--cb-muted); transition: color .25s; white-space: nowrap; }
+.step-item.active .step-label { color: var(--cb-navy); }
+.step-item.completed .step-label { color: var(--cb-green); }
+.step-line {
+  flex: 1; height: 2px; background: var(--cb-border);
+  margin: 0 14px; border-radius: 2px; transition: background .3s; min-width: 16px;
+}
+.step-line.done { background: var(--cb-green); }
+
+.main { max-width: 780px; margin: 0 auto; padding: 24px 28px 40px; }
+
+.panel {
+  background: var(--cb-white); border: 1px solid var(--cb-border);
+  border-radius: var(--radius); padding: 24px;
+  box-shadow: 0 1px 4px rgba(27,79,255,.06); margin-bottom: 20px;
+}
+.panel-header { margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid var(--cb-blue-light); }
+.panel-header h2 { font-size: 15px; font-weight: 700; color: var(--cb-navy); line-height: 1.2; }
+.panel-header p { font-size: 11px; color: var(--cb-muted); font-weight: 400; margin-top: 3px; }
+
+.section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--cb-muted); margin-bottom: 6px;
 }
 
-.form-input, .form-select {
-  width: 100%;
-  padding: 12px 16px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
+.row { margin: 14px 0; }
+.row:first-child { margin-top: 0; }
+
+label.field-label {
+  display: block; font-weight: 600; font-size: 12px; color: var(--cb-navy);
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px;
 }
 
-.form-input:focus, .form-select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+select, input[type="text"], input[type="date"], input[type="number"] {
+  width: 100%; padding: 9px 12px; border: 1.5px solid var(--cb-border);
+  border-radius: var(--radius); font-family: inherit; font-size: 13px;
+  color: var(--cb-text); background: var(--cb-white);
+  transition: border-color .15s, box-shadow .15s; outline: none;
+}
+select:focus, input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus {
+  border-color: var(--cb-blue); box-shadow: 0 0 0 3px rgba(27,79,255,.12);
+}
+input::placeholder { color: var(--cb-muted); opacity: 0.7; }
+
+.muted {
+  color: var(--cb-muted); font-size: 11px; margin-top: 5px;
+  display: flex; align-items: flex-start; gap: 5px;
+}
+.muted::before { content: "\2139"; font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+
+.divider { height: 1px; background: var(--cb-border); margin: 18px 0; }
+
+.tip {
+  background: var(--cb-blue-light); border-left: 3px solid var(--cb-blue);
+  border-radius: 0 6px 6px 0; padding: 10px 14px; font-size: 11px;
+  color: var(--cb-navy); margin-top: 16px;
 }
 
-.form-input::placeholder {
-  color: var(--text-dim);
+.badge {
+  display: inline-block; background: var(--cb-blue-light); color: var(--cb-blue);
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  margin-left: 6px; vertical-align: middle; text-transform: uppercase; letter-spacing: .3px;
 }
 
-.form-select {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%238B8FA3' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 36px;
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+thead tr { background: var(--cb-navy); }
+th {
+  padding: 9px 10px; text-align: left; font-size: 11px; font-weight: 600;
+  color: #fff; text-transform: uppercase; letter-spacing: .4px;
+}
+th:first-child { border-radius: 6px 0 0 0; }
+th:last-child { border-radius: 0 6px 0 0; }
+td { border-bottom: 1px solid var(--cb-border); padding: 8px 10px; vertical-align: middle; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: var(--cb-bg); }
+td select, td input[type="text"], td input[type="date"], td input[type="number"] {
+  padding: 6px 8px; font-size: 12px; border-radius: 6px;
 }
 
-.form-select option {
-  background: var(--surface);
-  color: var(--text);
-}
+.btns { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+.btns-between { justify-content: space-between; }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+button {
+  padding: 9px 18px; border-radius: var(--radius); font-family: inherit;
+  font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+  transition: background .15s, box-shadow .15s, opacity .15s;
 }
-
-.form-row-3 {
-  display: grid;
-  grid-template-columns: 2fr 1fr auto;
-  gap: 12px;
-  align-items: end;
+button.primary { background: var(--cb-blue); color: #fff; box-shadow: 0 2px 8px rgba(27,79,255,.25); }
+button.primary:hover { background: var(--cb-blue-dark); }
+button.primary:disabled { background: #9DB4FF; box-shadow: none; cursor: not-allowed; }
+button.ghost { background: transparent; color: var(--cb-muted); border: 1.5px solid var(--cb-border); }
+button.ghost:hover { background: var(--cb-bg); }
+button.success { background: var(--cb-green); color: #fff; box-shadow: 0 2px 8px rgba(15,169,88,.25); }
+button.success:hover { background: #0D9A4F; }
+button.success:disabled { background: #9AE0B8; box-shadow: none; cursor: not-allowed; }
+button.btn-add {
+  background: transparent; color: var(--cb-muted); border: 1.5px dashed var(--cb-border);
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
 }
-
-/* ── Room type builder ── */
-.room-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
+button.btn-add:hover { border-color: var(--cb-blue); color: var(--cb-blue); background: var(--cb-blue-light); }
+button.btn-remove {
+  width: 28px; height: 28px; padding: 0; border: 1.5px solid var(--cb-border);
+  background: transparent; border-radius: 6px; color: var(--cb-muted); font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
 }
+button.btn-remove:hover { border-color: var(--cb-error); color: var(--cb-error); background: #FFF0F2; }
 
-.room-row {
-  display: grid;
-  grid-template-columns: 1fr 100px 100px auto;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 16px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  animation: slideIn 0.25s ease;
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--cb-border);
 }
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.room-row input {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.room-row input:focus {
-  border-color: var(--accent);
-}
-
-.room-row input[type="number"] {
-  text-align: center;
-  -moz-appearance: textfield;
-}
-.room-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-.room-row .room-label {
-  font-size: 12px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  text-align: center;
-}
-
-.btn-remove {
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--border);
-  background: transparent;
-  border-radius: 8px;
-  color: var(--text-dim);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  font-size: 18px;
-}
-
-.btn-remove:hover {
-  border-color: var(--red);
-  color: var(--red);
-  background: var(--red-dim);
-}
-
-.btn-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: transparent;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  color: var(--text-muted);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-add:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-glow);
-}
-
-/* ── Toggle switch ── */
-.toggle-group {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.toggle-group:last-child {
-  border-bottom: none;
-}
-
-.toggle-info h4 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 3px;
-}
-
-.toggle-info p {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.toggle {
-  position: relative;
-  width: 48px;
-  height: 26px;
-  flex-shrink: 0;
-}
-
-.toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
+.toggle-row:last-of-type { border-bottom: none; }
+.toggle-info h4 { font-size: 13px; font-weight: 600; color: var(--cb-navy); margin-bottom: 2px; }
+.toggle-info p { font-size: 11px; color: var(--cb-muted); }
+.toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
 .toggle-track {
-  position: absolute;
-  inset: 0;
-  background: var(--border);
-  border-radius: 13px;
-  cursor: pointer;
-  transition: background 0.3s;
+  position: absolute; inset: 0; background: var(--cb-border);
+  border-radius: 12px; cursor: pointer; transition: background .25s;
 }
-
 .toggle-track::after {
-  content: '';
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  background: var(--text-muted);
-  border-radius: 50%;
-  top: 3px;
-  left: 3px;
-  transition: all 0.3s;
+  content: ''; position: absolute; width: 18px; height: 18px;
+  background: var(--cb-white); border-radius: 50%; top: 3px; left: 3px;
+  transition: transform .25s; box-shadow: 0 1px 3px rgba(0,0,0,.15);
 }
+.toggle input:checked + .toggle-track { background: var(--cb-blue); }
+.toggle input:checked + .toggle-track::after { transform: translateX(20px); }
 
-.toggle input:checked + .toggle-track {
-  background: var(--accent);
-}
-
-.toggle input:checked + .toggle-track::after {
-  transform: translateX(22px);
-  background: white;
-}
-
-/* ── Conditional fields ── */
 .conditional-field {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
-  margin-top: 0;
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height .35s ease, opacity .25s ease, margin .25s ease; margin-top: 0;
 }
+.conditional-field.open { max-height: 200px; opacity: 1; margin-top: 14px; }
 
-.conditional-field.open {
-  max-height: 200px;
-  opacity: 1;
-  margin-top: 16px;
-}
-
-/* ── Slider ── */
-.slider-group {
-  margin-top: 6px;
-}
-
-.slider-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 10px;
-}
-
-.slider-value {
-  font-family: 'Space Mono', monospace;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--accent);
-}
-
+.slider-group { margin-top: 8px; }
+.slider-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.slider-value { font-size: 24px; font-weight: 700; color: var(--cb-blue); }
 input[type="range"] {
-  -webkit-appearance: none;
-  width: 100%;
-  height: 6px;
-  background: var(--border);
-  border-radius: 3px;
-  outline: none;
+  -webkit-appearance: none; width: 100%; height: 6px;
+  background: var(--cb-border); border-radius: 3px; outline: none; border: none; padding: 0;
 }
-
 input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
-  background: var(--accent);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 12px rgba(74, 108, 247, 0.4);
-  transition: transform 0.15s;
+  -webkit-appearance: none; width: 20px; height: 20px;
+  background: var(--cb-blue); border-radius: 50%; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(27,79,255,.3);
 }
-
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-}
-
 input[type="range"]::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  background: var(--accent);
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
+  width: 20px; height: 20px; background: var(--cb-blue);
+  border-radius: 50%; cursor: pointer; border: none;
 }
 
-/* ── Source builder ── */
-.source-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; margin-bottom: 12px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--cb-blue-light); color: var(--cb-blue);
+  font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 20px;
 }
-
-.source-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: var(--accent-glow);
-  border: 1px solid rgba(74, 108, 247, 0.3);
-  border-radius: 20px;
-  font-size: 13px;
-  color: var(--accent-hover);
-  animation: chipIn 0.2s ease;
-}
-
-.source-chip.ota {
-  background: var(--orange-dim);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: var(--orange);
-}
-
-@keyframes chipIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
-}
-
+.chip.ota { background: var(--cb-orange-light); color: var(--cb-orange); }
 .chip-remove {
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  font-size: 16px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  display: flex;
-  align-items: center;
+  background: none; border: none; color: inherit; cursor: pointer;
+  font-size: 14px; opacity: 0.6; transition: opacity .15s;
+  display: flex; align-items: center; padding: 0; line-height: 1;
 }
-
 .chip-remove:hover { opacity: 1; }
+.source-add-row { display: flex; gap: 8px; align-items: center; }
+.source-add-row input { flex: 1; }
+.source-add-row button { flex-shrink: 0; height: 38px; }
 
-/* ── Buttons ── */
-.btn-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 32px;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
-  border: none;
-  border-radius: var(--radius);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: white;
-  box-shadow: 0 4px 16px rgba(74, 108, 247, 0.3);
-}
-
-.btn-primary:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 6px 24px rgba(74, 108, 247, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-  border-color: var(--text-muted);
-  color: var(--text);
-}
-
-.btn-generate {
-  background: linear-gradient(135deg, var(--green), #10B981);
-  color: white;
-  padding: 14px 32px;
-  font-size: 15px;
-  box-shadow: 0 4px 20px rgba(52, 211, 153, 0.3);
-}
-
-.btn-generate:hover {
-  box-shadow: 0 6px 28px rgba(52, 211, 153, 0.45);
-  transform: translateY(-1px);
-}
-
-.btn-generate:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* ── Summary panel ── */
 .summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px; margin-bottom: 20px;
 }
-
 .summary-stat {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  background: var(--cb-bg); border: 1px solid var(--cb-border);
+  border-radius: var(--radius); padding: 14px; text-align: center;
 }
-
-.summary-stat .label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 6px;
+.summary-stat .stat-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--cb-muted); margin-bottom: 4px;
 }
-
-.summary-stat .value {
-  font-family: 'Space Mono', monospace;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text);
+.summary-stat .stat-value { font-size: 22px; font-weight: 700; color: var(--cb-navy); }
+.summary-stat .stat-value.blue { color: var(--cb-blue); }
+.summary-stat .stat-value.green { color: var(--cb-green); }
+.feature-tags { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 6px; }
+.feature-tag {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  background: var(--cb-blue-light); color: var(--cb-blue);
 }
+.feature-tag.green { background: var(--cb-green-light); color: var(--cb-green); }
+.feature-tag.orange { background: var(--cb-orange-light); color: var(--cb-orange); }
 
-.summary-stat .value.accent { color: var(--accent); }
-.summary-stat .value.green { color: var(--green); }
-
-/* ── Progress bar for generation ── */
-.gen-progress {
-  margin-top: 20px;
-  display: none;
-}
-
+.gen-progress { margin-top: 18px; display: none; }
 .gen-progress.active { display: block; }
-
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  background: var(--border);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
+.progress-bar { width: 100%; height: 6px; background: var(--cb-border); border-radius: 3px; overflow: hidden; }
 .progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--green));
-  border-radius: 3px;
-  transition: width 0.4s ease;
-  width: 0%;
+  height: 100%; background: linear-gradient(90deg, var(--cb-blue), var(--cb-green));
+  border-radius: 3px; transition: width .4s ease; width: 0%;
 }
+.progress-label { font-size: 11px; color: var(--cb-muted); margin-top: 8px; font-weight: 500; }
 
-.progress-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-top: 10px;
-  font-family: 'Space Mono', monospace;
+.step-section { display: none; }
+.step-section.active { display: block; animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+.error {
+  color: var(--cb-error); font-size: 12px; margin: 14px auto 0; white-space: pre-wrap;
+  background: #FFF0F2; border: 1px solid #FAC5CC; border-radius: var(--radius);
+  padding: 10px 12px; display: none; max-width: 780px;
 }
+.error.visible { display: block; }
 
-/* ── Sections visibility ── */
-.step-section {
-  display: none;
-}
-
-.step-section.active {
-  display: block;
-  animation: fadeUp 0.35s ease;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ── Room type header row ── */
-.room-header {
-  display: grid;
-  grid-template-columns: 1fr 100px 100px auto;
-  gap: 12px;
-  padding: 0 16px 8px;
-}
-
-.room-header span {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.room-header span:nth-child(2),
-.room-header span:nth-child(3) {
-  text-align: center;
-}
-
-/* ── Responsive ── */
 @media (max-width: 640px) {
   .topbar { padding: 12px 16px; }
-  .stepper-wrap { padding: 20px 16px 0; }
-  .main { padding: 20px 16px; }
-  .card { padding: 20px; }
-  .form-row { grid-template-columns: 1fr; }
-  .room-row { grid-template-columns: 1fr 70px 70px auto; gap: 8px; }
-  .room-header { grid-template-columns: 1fr 70px 70px auto; gap: 8px; }
-  .stepper { gap: 0; }
+  .stepper-wrap { padding: 16px 16px 0; }
+  .main { padding: 16px 16px 32px; }
+  .panel { padding: 16px; }
   .step-label { display: none; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
 }
@@ -738,719 +297,355 @@ input[type="range"]::-moz-range-thumb {
 </head>
 <body>
 
-<!-- ═══ Top Bar ═══ -->
 <div class="topbar">
-  <div class="logo">
-    <div class="logo-icon">CB</div>
-    Reservation Import Generator
+  <div class="topbar-left">
+    <div class="logo-mark">
+      <svg viewBox="0 0 20 20" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15.5 8.5a4 4 0 0 0-7.6-1.6A3 3 0 1 0 4 13h11.5a3 3 0 0 0 0-4.5z"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <h1>Reservation Import Generator</h1>
+      <p>Cloudbeds PMS &mdash; Demo Data Tool</p>
+    </div>
   </div>
-  <div class="topbar-badge">v1.0</div>
+  <span class="topbar-badge">v1.0</span>
 </div>
 
-<!-- ═══ Stepper ═══ -->
 <div class="stepper-wrap">
   <div class="stepper">
-    <div class="step-item active" data-step="1">
-      <div class="step-circle">1</div>
-      <span class="step-label">Room Types</span>
-    </div>
+    <div class="step-item active" data-step="1"><div class="step-circle">1</div><span class="step-label">Room Types</span></div>
     <div class="step-line"></div>
-    <div class="step-item" data-step="2">
-      <div class="step-circle">2</div>
-      <span class="step-label">Configuration</span>
-    </div>
+    <div class="step-item" data-step="2"><div class="step-circle">2</div><span class="step-label">Configuration</span></div>
     <div class="step-line"></div>
-    <div class="step-item" data-step="3">
-      <div class="step-circle">3</div>
-      <span class="step-label">Sources</span>
-    </div>
+    <div class="step-item" data-step="3"><div class="step-circle">3</div><span class="step-label">Sources</span></div>
     <div class="step-line"></div>
-    <div class="step-item" data-step="4">
-      <div class="step-circle">4</div>
-      <span class="step-label">Generate</span>
-    </div>
+    <div class="step-item" data-step="4"><div class="step-circle">4</div><span class="step-label">Generate</span></div>
   </div>
 </div>
 
-<!-- ═══ Main Content ═══ -->
 <div class="main">
 
-  <!-- ──── STEP 1: Room Types ──── -->
+  <!-- STEP 1 -->
   <div class="step-section active" id="step1">
-    <div class="card">
-      <div class="card-header">
+    <div class="panel">
+      <div class="panel-header">
         <h2>Configure Room Types</h2>
-        <p>Add each accommodation type from the Cloudbeds property. Enter the name exactly as it appears in the PMS, along with the nightly rate and total room count.</p>
+        <p>Add each accommodation type from the Cloudbeds property. Name must match the PMS exactly.</p>
       </div>
-
-      <div class="room-header">
-        <span>Accommodation Name</span>
-        <span>Rate ($)</span>
-        <span>Count</span>
-        <span></span>
-      </div>
-
-      <div class="room-list" id="roomList">
-        <!-- Room rows inserted by JS -->
-      </div>
-
-      <button class="btn-add" onclick="addRoom()">
-        <span style="font-size:18px;">+</span> Add Room Type
-      </button>
+      <table id="roomTable">
+        <thead><tr>
+          <th style="width:45%">Accommodation Name</th>
+          <th style="width:20%">Nightly Rate ($)</th>
+          <th style="width:20%">Room Count</th>
+          <th style="width:15%"></th>
+        </tr></thead>
+        <tbody id="roomTableBody"></tbody>
+      </table>
+      <button class="btn-add" onclick="addRoom()"><span style="font-size:16px">+</span> Add Room Type</button>
+      <div class="tip">Room type names must match exactly what is configured in Cloudbeds, otherwise the import will fail.</div>
     </div>
-
-    <div class="btn-row">
+    <div class="btns btns-between">
       <div></div>
-      <button class="btn btn-primary" onclick="goToStep(2)">Continue to Configuration →</button>
+      <button class="primary" onclick="goToStep(2)">Continue &rarr;</button>
     </div>
   </div>
 
-  <!-- ──── STEP 2: Configuration ──── -->
+  <!-- STEP 2 -->
   <div class="step-section" id="step2">
-    <div class="card">
-      <div class="card-header">
+    <div class="panel">
+      <div class="panel-header">
         <h2>Import Configuration</h2>
-        <p>Configure the behavior and date range for the generated reservations.</p>
+        <p>Set the date range, occupancy target, and reservation behaviors.</p>
       </div>
-
-      <div class="toggle-group">
-        <div class="toggle-info">
-          <h4>Include historical reservations?</h4>
-          <p>Generate reservations that start before today's date</p>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="toggleHistorical" onchange="toggleConditional('historicalDate', this.checked)">
-          <div class="toggle-track"></div>
-        </label>
+      <div class="toggle-row">
+        <div class="toggle-info"><h4>Include historical reservations?</h4><p>Generate reservations with check-in dates before today</p></div>
+        <label class="toggle"><input type="checkbox" id="toggleHistorical" onchange="toggleCond('historicalDate',this.checked)"><div class="toggle-track"></div></label>
       </div>
-
       <div class="conditional-field" id="historicalDate">
-        <div class="form-group" style="margin-bottom:0">
-          <label class="form-label">Historical start date</label>
-          <input type="date" class="form-input" id="historicalStart">
+        <div class="row">
+          <label class="field-label">Historical Start Date</label>
+          <input type="date" id="historicalStart">
+          <div class="muted">Reservations will be generated starting from this date</div>
         </div>
       </div>
-
-      <div class="toggle-group">
-        <div class="toggle-info">
-          <h4>Include "Confirmation Pending" reservations?</h4>
-          <p>Some reservations will have a pending confirmation status</p>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="togglePending">
-          <div class="toggle-track"></div>
-        </label>
+      <div class="toggle-row">
+        <div class="toggle-info"><h4>Include "Confirmation Pending" status?</h4><p>~12% of reservations will show as pending confirmation</p></div>
+        <label class="toggle"><input type="checkbox" id="togglePending"><div class="toggle-track"></div></label>
       </div>
-
-      <div class="toggle-group">
-        <div class="toggle-info">
-          <h4>Include OTA-sourced reservations?</h4>
-          <p>Add reservations from channels like Booking.com, Expedia, etc.</p>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" id="toggleOTA">
-          <div class="toggle-track"></div>
-        </label>
+      <div class="toggle-row">
+        <div class="toggle-info"><h4>Include OTA-sourced reservations?</h4><p>Add bookings from channels like Booking.com, Expedia, etc.</p></div>
+        <label class="toggle"><input type="checkbox" id="toggleOTA"><div class="toggle-track"></div></label>
       </div>
-
-      <div style="margin-top: 24px;">
-        <div class="form-group">
-          <label class="form-label">Number of days to generate reservations for</label>
-          <input type="number" class="form-input" id="numDays" placeholder="e.g. 90" min="1" max="730" value="90">
-        </div>
+      <div class="divider"></div>
+      <div class="row">
+        <label class="field-label">Number of Days to Generate</label>
+        <input type="number" id="numDays" placeholder="e.g. 90" min="1" max="730" value="90">
+        <div class="muted">How many days into the future should reservations extend</div>
       </div>
-
+      <div class="divider"></div>
       <div class="slider-group">
         <div class="slider-header">
-          <label class="form-label" style="margin-bottom:0">Target average occupancy</label>
+          <label class="field-label" style="margin-bottom:0">Target Average Occupancy</label>
           <div class="slider-value" id="occValue">65%</div>
         </div>
-        <input type="range" id="occSlider" min="10" max="100" value="65" oninput="updateOccSlider()">
+        <input type="range" id="occSlider" min="10" max="100" value="65" oninput="updateOcc()">
       </div>
     </div>
-
-    <div class="btn-row">
-      <button class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
-      <button class="btn btn-primary" onclick="goToStep(3)">Continue to Sources →</button>
+    <div class="btns btns-between">
+      <button class="ghost" onclick="goToStep(1)">&larr; Back</button>
+      <button class="primary" onclick="goToStep(3)">Continue &rarr;</button>
     </div>
   </div>
 
-  <!-- ──── STEP 3: Sources ──── -->
+  <!-- STEP 3 -->
   <div class="step-section" id="step3">
-    <div class="card">
-      <div class="card-header">
+    <div class="panel">
+      <div class="panel-header">
         <h2>Reservation Sources</h2>
-        <p>Add the booking sources that should appear on the reservations. OTA sources will only be used if enabled in the previous step.</p>
+        <p>Configure which booking sources will appear on generated reservations.</p>
       </div>
-
-      <div style="margin-bottom: 20px;">
-        <label class="form-label">Direct / Standard Sources</label>
-        <div class="source-chips" id="directChips"></div>
-        <div class="form-row-3">
-          <input type="text" class="form-input" id="directSourceInput" placeholder="e.g. Website/Booking Engine">
-          <button class="btn btn-primary" style="padding:10px 20px;height:44px;" onclick="addSource('direct')">Add</button>
+      <div class="row">
+        <label class="field-label">Direct / Standard Sources</label>
+        <div class="chip-list" id="directChips"></div>
+        <div class="source-add-row">
+          <input type="text" id="directSourceInput" placeholder="e.g. Website/Booking Engine">
+          <button class="primary" onclick="addSource('direct')">Add</button>
         </div>
       </div>
-
-      <div id="otaSourceSection" style="display:none; margin-top: 24px;">
-        <label class="form-label">OTA Sources</label>
-        <div class="source-chips" id="otaChips"></div>
-        <div class="form-row-3">
-          <input type="text" class="form-input" id="otaSourceInput" placeholder="e.g. Booking.com">
-          <button class="btn btn-primary" style="padding:10px 20px;height:44px;" onclick="addSource('ota')">Add</button>
+      <div id="otaSourceSection" style="display:none">
+        <div class="divider"></div>
+        <div class="row">
+          <label class="field-label">OTA Sources</label>
+          <div class="chip-list" id="otaChips"></div>
+          <div class="source-add-row">
+            <input type="text" id="otaSourceInput" placeholder="e.g. Booking.com">
+            <button class="primary" onclick="addSource('ota')">Add</button>
+          </div>
         </div>
       </div>
+      <div class="tip">Source names should match the reservation sources configured in your Cloudbeds property settings.</div>
     </div>
-
-    <div class="btn-row">
-      <button class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
-      <button class="btn btn-primary" onclick="goToStep(4)">Review & Generate →</button>
+    <div class="btns btns-between">
+      <button class="ghost" onclick="goToStep(2)">&larr; Back</button>
+      <button class="primary" onclick="goToStep(4)">Review &amp; Generate &rarr;</button>
     </div>
   </div>
 
-  <!-- ──── STEP 4: Review & Generate ──── -->
+  <!-- STEP 4 -->
   <div class="step-section" id="step4">
-    <div class="card">
-      <div class="card-header">
-        <h2>Review & Generate</h2>
-        <p>Verify your configuration below. When ready, click generate to create the Cloudbeds import CSV.</p>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Review &amp; Generate</h2>
+        <p>Verify your configuration, then generate and download the Cloudbeds import CSV.</p>
       </div>
-
-      <div class="summary-grid" id="summaryGrid">
-        <!-- Filled by JS -->
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div class="divider"></div>
+      <div class="row">
+        <div class="section-label">Room Types</div>
+        <table><thead><tr><th>Accommodation</th><th style="text-align:right">Rate</th><th style="text-align:right">Rooms</th></tr></thead>
+        <tbody id="roomSummaryBody"></tbody></table>
       </div>
-
-      <div id="roomSummary" style="margin-bottom: 20px;"></div>
-      <div id="sourceSummary"></div>
+      <div class="divider"></div>
+      <div class="row">
+        <div class="section-label">Booking Sources</div>
+        <div class="chip-list" id="sourceSummaryChips"></div>
+      </div>
     </div>
-
-    <div class="btn-row">
-      <button class="btn btn-secondary" onclick="goToStep(3)">← Back</button>
-      <button class="btn btn-generate" id="btnGenerate" onclick="generateCSV()">⬇ Generate & Download CSV</button>
+    <div class="btns btns-between">
+      <button class="ghost" onclick="goToStep(3)">&larr; Back</button>
+      <button class="success" id="btnGenerate" onclick="generateCSV()">&darr; Generate &amp; Download CSV</button>
     </div>
-
     <div class="gen-progress" id="genProgress">
-      <div class="progress-bar">
-        <div class="progress-fill" id="progressFill"></div>
-      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
       <div class="progress-label" id="progressLabel">Preparing guest names...</div>
     </div>
   </div>
 
 </div>
 
+<div class="error" id="errorBox"></div>
+
 <script>
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
-let currentStep = 1;
-let rooms = [];
-let directSources = ['Website/Booking Engine', 'Walk-In', 'Phone', 'Email'];
-let otaSources = ['Booking.com (Hotel Collect)', 'Expedia (Hotel Collect Booking)'];
+let currentStep=1, rooms=[];
+let directSources=['Website/Booking Engine','Walk-In','Phone','Email'];
+let otaSources=['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
 
-// Name database (embedded subset — full list loaded if available)
-const FIRST_NAMES = ["James","Michael","Robert","William","David","John","Joseph","Charles","Thomas","Daniel","Matthew","Anthony","Christopher","Joshua","Andrew","Ryan","Kevin","Brian","Jason","Eric","Adam","Justin","Steven","Paul","Brandon","Kyle","Nathan","Aaron","Zachary","Tyler","Emma","Olivia","Ava","Isabella","Sophia","Mia","Charlotte","Amelia","Harper","Evelyn","Abigail","Emily","Elizabeth","Sofia","Avery","Ella","Scarlett","Grace","Chloe","Victoria","Riley","Aria","Lily","Aubrey","Zoey","Hannah","Layla","Nora","Camila","Luna","Penelope","Leah","Madelyn","Stella","Hazel","Ellie","Paisley","Audrey","Skylar","Violet","Claire","Bella","Aurora","Savannah","Brooklyn","Aaliyah","Gabriella","Sadie","Ariana","Genesis","Naomi","Elena","Caroline","Kennedy","Maya","Willow","Kinsley","Mackenzie","Ruby","Gianna","Makayla","Kylie","Morgan","Allison","Faith","Alexandra","Alice","Alexa","Jasmine","Eva","Sarah","Madeline","Lydia","Piper","Natalie","Adeline","Serenity","Taylor","Eliana","Hailey","Brianna","Bailey","Andrea","Katherine","Melody","Lauren","Autumn","Nevaeh","Reagan","Samantha","Anna","Josephine","Ivy","Valentina","Lucy","Maria","Liam","Noah","Oliver","Elijah","Lucas","Mason","Logan","Alexander","Ethan","Jacob","Henry","Sebastian","Jack","Aiden","Owen","Samuel","Benjamin","Leo","Levi","Caleb","Dylan","Luke","Gabriel","Julian","Isaac","Lincoln","Carter","Jayden","Connor","Mateo","Wyatt","Jeremiah","Nolan","Easton","Christian","Hunter","Jonathan","Asher","Cameron","Adrian","Miles","Eli","Theodore","Grayson","Ian","Landon","Xavier","Kai","Carson","Jaxon","Ezra","Colton","Cooper","Everett","Parker","Dominic","Nathaniel","Max","Harrison","Axel","Brooks","Bentley","Emerson","Declan","Tristan","Brody","Gavin","Maxwell","Rowan","Damian","Micah","Weston","Jorge","Felix","Patrick","Sean","Alan","Marcus","Jesse","Grant","Victor","Derek","Peter","Vincent","Raymond","Cole","Troy","Philip","Mitchell","Oscar","Eduardo","Wesley","Andre","Travis","Dustin","Scott","Brady","Finn","Archer","Brooks","Milo","Jasper","Hugo","Silas"];
-const LAST_NAMES = ["Anderson","Johnson","Miller","Davis","Wilson","Thompson","Martinez","Taylor","Moore","Jackson","White","Harris","Lewis","Walker","Hall","Allen","Young","King","Scott","Green","Baker","Hill","Adams","Nelson","Carter","Roberts","Mitchell","Perez","Turner","Phillips","Campbell","Parker","Evans","Edwards","Collins","Stewart","Sanchez","Morris","Rogers","Reed","Cook","Morgan","Bell","Murphy","Bailey","Rivera","Cooper","Richardson","Cox","Howard","Ward","Torres","Peterson","Gray","Ramirez","James","Watson","Brooks","Kelly","Sanders","Price","Bennett","Wood","Barnes","Ross","Henderson","Coleman","Jenkins","Perry","Powell","Long","Patterson","Hughes","Flores","Washington","Butler","Simmons","Foster","Gonzales","Bryant","Alexander","Russell","Griffin","Diaz","Hayes","Myers","Ford","Hamilton","Graham","Sullivan","Wallace","Woods","Cole","West","Jordan","Owens","Reynolds","Fisher","Ellis","Harrison","Gibson","McDonald","Cruz","Marshall","Ortiz","Gomez","Murray","Freeman","Wells","Webb","Simpson","Stevens","Tucker","Porter","Hunter","Hicks","Crawford","Henry","Boyd","Mason","Morales","Kennedy","Warren","Dixon","Ramos","Reyes","Burns","Gordon","Shaw","Holmes","Rice","Robertson","Hunt","Black","Daniels","Palmer","Mills","Nichols","Grant","Knight","Ferguson","Rose","Stone","Hawkins","Dunn","Perkins","Hudson","Spencer","Gardner","Stephens","Payne","Pierce","Berry","Matthews","Arnold","Wagner","Willis","Ray","Watkins","Olson","Carroll","Duncan","Snyder","Hart","Cunningham","Bradley","Lane","Andrews","Ruiz","Harper","Fox","Riley","Armstrong","Carpenter","Weaver","Greene","Lawrence","Elliott","Chavez","Sims","Austin","Peters","Kelley","Franklin","Lawson"];
+const FN=["James","Michael","Robert","William","David","John","Joseph","Charles","Thomas","Daniel","Matthew","Anthony","Christopher","Joshua","Andrew","Ryan","Kevin","Brian","Jason","Eric","Adam","Justin","Steven","Paul","Brandon","Kyle","Nathan","Aaron","Zachary","Tyler","Emma","Olivia","Ava","Isabella","Sophia","Mia","Charlotte","Amelia","Harper","Evelyn","Abigail","Emily","Elizabeth","Sofia","Avery","Ella","Scarlett","Grace","Chloe","Victoria","Riley","Aria","Lily","Aubrey","Zoey","Hannah","Layla","Nora","Camila","Luna","Penelope","Leah","Madelyn","Stella","Hazel","Ellie","Paisley","Audrey","Skylar","Violet","Claire","Bella","Aurora","Savannah","Brooklyn","Aaliyah","Gabriella","Sadie","Ariana","Genesis","Naomi","Elena","Caroline","Kennedy","Maya","Willow","Kinsley","Mackenzie","Ruby","Gianna","Makayla","Kylie","Morgan","Allison","Faith","Alexandra","Alice","Alexa","Jasmine","Eva","Sarah","Madeline","Lydia","Piper","Natalie","Adeline","Serenity","Taylor","Eliana","Hailey","Brianna","Bailey","Andrea","Katherine","Melody","Lauren","Autumn","Nevaeh","Reagan","Samantha","Anna","Josephine","Ivy","Valentina","Lucy","Maria","Liam","Noah","Oliver","Elijah","Lucas","Mason","Logan","Alexander","Ethan","Jacob","Henry","Sebastian","Jack","Aiden","Owen","Samuel","Benjamin","Leo","Levi","Caleb","Dylan","Luke","Gabriel","Julian","Isaac","Lincoln","Carter","Jayden","Connor","Mateo","Wyatt","Jeremiah","Nolan","Easton","Christian","Hunter","Jonathan","Asher","Cameron","Adrian","Miles","Eli","Theodore","Grayson","Ian","Landon","Xavier","Kai","Carson","Jaxon","Ezra","Colton","Cooper","Everett","Parker","Dominic","Nathaniel","Max","Harrison","Axel","Brooks","Bentley","Emerson","Declan","Tristan","Brody","Gavin","Maxwell","Rowan","Damian","Micah","Weston","Jorge","Felix","Patrick","Sean","Alan","Marcus","Jesse","Grant","Victor","Derek","Peter","Vincent","Raymond","Cole","Troy","Philip","Mitchell","Oscar","Eduardo","Wesley","Andre","Travis","Dustin","Scott","Brady","Finn","Archer","Milo","Jasper","Hugo","Silas"];
+const LN=["Anderson","Johnson","Miller","Davis","Wilson","Thompson","Martinez","Taylor","Moore","Jackson","White","Harris","Lewis","Walker","Hall","Allen","Young","King","Scott","Green","Baker","Hill","Adams","Nelson","Carter","Roberts","Mitchell","Perez","Turner","Phillips","Campbell","Parker","Evans","Edwards","Collins","Stewart","Sanchez","Morris","Rogers","Reed","Cook","Morgan","Bell","Murphy","Bailey","Rivera","Cooper","Richardson","Cox","Howard","Ward","Torres","Peterson","Gray","Ramirez","James","Watson","Brooks","Kelly","Sanders","Price","Bennett","Wood","Barnes","Ross","Henderson","Coleman","Jenkins","Perry","Powell","Long","Patterson","Hughes","Flores","Washington","Butler","Simmons","Foster","Gonzales","Bryant","Alexander","Russell","Griffin","Diaz","Hayes","Myers","Ford","Hamilton","Graham","Sullivan","Wallace","Woods","Cole","West","Jordan","Owens","Reynolds","Fisher","Ellis","Harrison","Gibson","McDonald","Cruz","Marshall","Ortiz","Gomez","Murray","Freeman","Wells","Webb","Simpson","Stevens","Tucker","Porter","Hunter","Hicks","Crawford","Henry","Boyd","Mason","Morales","Kennedy","Warren","Dixon","Ramos","Reyes","Burns","Gordon","Shaw","Holmes","Rice","Robertson","Hunt","Black","Daniels","Palmer","Mills","Nichols","Grant","Knight","Ferguson","Rose","Stone","Hawkins","Dunn","Perkins","Hudson","Spencer","Gardner","Stephens","Payne","Pierce","Berry","Matthews","Arnold","Wagner","Willis","Ray","Watkins","Olson","Carroll","Duncan","Snyder","Hart","Cunningham","Bradley","Lane","Andrews","Ruiz","Harper","Fox","Riley","Armstrong","Carpenter","Weaver","Greene","Lawrence","Elliott","Chavez","Sims","Austin","Peters","Kelley","Franklin","Lawson"];
 
-// ═══════════════════════════════════════════
-// INITIALIZATION
-// ═══════════════════════════════════════════
-function init() {
-  addRoom('Classic King', 249, 10);
-  addRoom('Executive King Suite', 309, 5);
-  renderSourceChips();
-
-  // Set default historical date to 6 months ago
-  const d = new Date();
-  d.setMonth(d.getMonth() - 6);
-  document.getElementById('historicalStart').value = d.toISOString().split('T')[0];
-
-  // Enter key support for source inputs
-  document.getElementById('directSourceInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addSource('direct');
-  });
-  document.getElementById('otaSourceInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addSource('ota');
-  });
+function init(){
+  addRoom('Classic King',249,10);
+  addRoom('Executive King Suite',309,5);
+  renderChips();
+  const d=new Date(); d.setMonth(d.getMonth()-6);
+  document.getElementById('historicalStart').value=d.toISOString().split('T')[0];
+  document.getElementById('directSourceInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSource('direct')});
+  document.getElementById('otaSourceInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSource('ota')});
 }
 
-// ═══════════════════════════════════════════
-// STEP NAVIGATION
-// ═══════════════════════════════════════════
-function goToStep(step) {
-  // Validation
-  if (step > 1 && rooms.length === 0) {
-    alert('Please add at least one room type.');
-    return;
-  }
-  if (step > 1) {
-    for (const r of rooms) {
-      if (!r.name.trim()) { alert('All room types need a name.'); return; }
-      if (!r.rate || r.rate <= 0) { alert(`Room "${r.name}" needs a valid rate.`); return; }
-      if (!r.count || r.count <= 0) { alert(`Room "${r.name}" needs a valid room count.`); return; }
-    }
-  }
-  if (step > 3 && directSources.length === 0) {
-    alert('Please add at least one booking source.');
-    return;
-  }
-
-  // Show/hide OTA section on step 3
-  if (step === 3) {
-    document.getElementById('otaSourceSection').style.display =
-      document.getElementById('toggleOTA').checked ? 'block' : 'none';
-  }
-
-  // Build summary on step 4
-  if (step === 4) buildSummary();
-
-  // Update stepper UI
-  document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
-  document.getElementById('step' + step).classList.add('active');
-
-  document.querySelectorAll('.step-item').forEach(item => {
-    const s = parseInt(item.dataset.step);
-    item.classList.remove('active', 'completed');
-    if (s === step) item.classList.add('active');
-    else if (s < step) item.classList.add('completed');
+function goToStep(s){
+  if(s>1&&rooms.length===0){showErr('Please add at least one room type.');return}
+  if(s>1){for(const r of rooms){
+    if(!r.name.trim()){showErr('All room types need a name.');return}
+    if(!r.rate||r.rate<=0){showErr('"'+r.name+'" needs a valid nightly rate.');return}
+    if(!r.count||r.count<=0){showErr('"'+r.name+'" needs a valid room count.');return}
+  }}
+  if(s>3&&directSources.length===0){showErr('Please add at least one booking source.');return}
+  clearErr();
+  if(s===3)document.getElementById('otaSourceSection').style.display=document.getElementById('toggleOTA').checked?'block':'none';
+  if(s===4)buildSummary();
+  document.querySelectorAll('.step-section').forEach(el=>el.classList.remove('active'));
+  document.getElementById('step'+s).classList.add('active');
+  document.querySelectorAll('.step-item').forEach(item=>{
+    const n=parseInt(item.dataset.step);
+    item.classList.remove('active','completed');
+    if(n===s)item.classList.add('active');
+    else if(n<s)item.classList.add('completed');
   });
-
-  document.querySelectorAll('.step-line').forEach((line, i) => {
-    line.classList.toggle('done', i < step - 1);
-  });
-
-  currentStep = step;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.querySelectorAll('.step-line').forEach((l,i)=>l.classList.toggle('done',i<s-1));
+  currentStep=s;
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ═══════════════════════════════════════════
-// ROOM MANAGEMENT
-// ═══════════════════════════════════════════
-function addRoom(name = '', rate = '', count = '') {
-  const id = Date.now() + Math.random();
-  rooms.push({ id, name, rate: parseFloat(rate) || 0, count: parseInt(count) || 0 });
+function showErr(m){const e=document.getElementById('errorBox');e.textContent=m;e.classList.add('visible')}
+function clearErr(){const e=document.getElementById('errorBox');e.textContent='';e.classList.remove('visible')}
+
+function addRoom(name='',rate='',count=''){
+  const id=Date.now()+Math.random();
+  rooms.push({id,name,rate:parseFloat(rate)||0,count:parseInt(count)||0});
   renderRooms();
 }
-
-function removeRoom(id) {
-  rooms = rooms.filter(r => r.id !== id);
-  renderRooms();
+function removeRoom(id){rooms=rooms.filter(r=>r.id!==id);renderRooms()}
+function updateRoom(id,f,v){
+  const r=rooms.find(x=>x.id===id);if(!r)return;
+  if(f==='name')r.name=v;else if(f==='rate')r.rate=parseFloat(v)||0;else if(f==='count')r.count=parseInt(v)||0;
+}
+function renderRooms(){
+  document.getElementById('roomTableBody').innerHTML=rooms.map(r=>`<tr>
+    <td><input type="text" placeholder="e.g. Deluxe King" value="${esc(r.name)}" onchange="updateRoom(${r.id},'name',this.value)"></td>
+    <td><input type="number" placeholder="249" value="${r.rate||''}" min="0" step="0.01" onchange="updateRoom(${r.id},'rate',this.value)"></td>
+    <td><input type="number" placeholder="10" value="${r.count||''}" min="1" onchange="updateRoom(${r.id},'count',this.value)"></td>
+    <td style="text-align:center"><button class="btn-remove" onclick="removeRoom(${r.id})">&times;</button></td>
+  </tr>`).join('');
 }
 
-function updateRoom(id, field, value) {
-  const room = rooms.find(r => r.id === id);
-  if (!room) return;
-  if (field === 'name') room.name = value;
-  else if (field === 'rate') room.rate = parseFloat(value) || 0;
-  else if (field === 'count') room.count = parseInt(value) || 0;
+function addSource(t){
+  const iid=t==='direct'?'directSourceInput':'otaSourceInput',inp=document.getElementById(iid),v=inp.value.trim();
+  if(!v)return;
+  if(t==='direct'){if(!directSources.includes(v))directSources.push(v)}else{if(!otaSources.includes(v))otaSources.push(v)}
+  inp.value='';renderChips();
+}
+function removeSource(t,i){if(t==='direct')directSources.splice(i,1);else otaSources.splice(i,1);renderChips()}
+function renderChips(){
+  document.getElementById('directChips').innerHTML=directSources.map((s,i)=>`<span class="chip">${esc(s)}<button class="chip-remove" onclick="removeSource('direct',${i})">&times;</button></span>`).join('');
+  document.getElementById('otaChips').innerHTML=otaSources.map((s,i)=>`<span class="chip ota">${esc(s)}<button class="chip-remove" onclick="removeSource('ota',${i})">&times;</button></span>`).join('');
 }
 
-function renderRooms() {
-  const list = document.getElementById('roomList');
-  list.innerHTML = rooms.map(r => `
-    <div class="room-row">
-      <input type="text" placeholder="e.g. Deluxe King" value="${escapeHtml(r.name)}"
-        onchange="updateRoom(${r.id}, 'name', this.value)">
-      <input type="number" placeholder="249" value="${r.rate || ''}" min="0" step="0.01"
-        onchange="updateRoom(${r.id}, 'rate', this.value)">
-      <input type="number" placeholder="10" value="${r.count || ''}" min="1"
-        onchange="updateRoom(${r.id}, 'count', this.value)">
-      <button class="btn-remove" onclick="removeRoom(${r.id})">×</button>
-    </div>
-  `).join('');
+function toggleCond(id,show){document.getElementById(id).classList.toggle('open',show)}
+function updateOcc(){document.getElementById('occValue').textContent=document.getElementById('occSlider').value+'%'}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function buildSummary(){
+  const tot=rooms.reduce((s,r)=>s+r.count,0),
+    nd=parseInt(document.getElementById('numDays').value)||90,
+    occ=parseInt(document.getElementById('occSlider').value),
+    hist=document.getElementById('toggleHistorical').checked,
+    pend=document.getElementById('togglePending').checked,
+    ota=document.getElementById('toggleOTA').checked,
+    est=Math.round(tot*nd*(occ/100)/2.5);
+  document.getElementById('summaryGrid').innerHTML=`
+    <div class="summary-stat"><div class="stat-label">Room Types</div><div class="stat-value">${rooms.length}</div></div>
+    <div class="summary-stat"><div class="stat-label">Total Rooms</div><div class="stat-value blue">${tot}</div></div>
+    <div class="summary-stat"><div class="stat-label">Days</div><div class="stat-value">${nd}</div></div>
+    <div class="summary-stat"><div class="stat-label">Target Occupancy</div><div class="stat-value blue">${occ}%</div></div>
+    <div class="summary-stat"><div class="stat-label">Est. Reservations</div><div class="stat-value green">~${est}</div></div>
+    <div class="summary-stat"><div class="stat-label">Features</div><div class="feature-tags">
+      ${hist?'<span class="feature-tag">Historical</span>':''}
+      ${pend?'<span class="feature-tag orange">Pending</span>':''}
+      ${ota?'<span class="feature-tag green">OTA</span>':''}
+      ${!hist&&!pend&&!ota?'<span class="feature-tag">Standard</span>':''}
+    </div></div>`;
+  document.getElementById('roomSummaryBody').innerHTML=rooms.map(r=>`<tr><td>${esc(r.name)}</td><td style="text-align:right">$${r.rate.toFixed(2)}</td><td style="text-align:right">${r.count}</td></tr>`).join('');
+  const all=[...directSources,...(ota?otaSources:[])];
+  document.getElementById('sourceSummaryChips').innerHTML=all.map(s=>`<span class="chip">${esc(s)}</span>`).join('');
 }
 
-// ═══════════════════════════════════════════
-// SOURCE MANAGEMENT
-// ═══════════════════════════════════════════
-function addSource(type) {
-  const inputId = type === 'direct' ? 'directSourceInput' : 'otaSourceInput';
-  const input = document.getElementById(inputId);
-  const val = input.value.trim();
-  if (!val) return;
+function generateCSV(){
+  const btn=document.getElementById('btnGenerate');btn.disabled=true;
+  const prog=document.getElementById('genProgress');prog.classList.add('active');
+  updProg(5,'Initializing...');
+  setTimeout(()=>{
+    try{
+      const csv=buildCSV();
+      updProg(100,'Complete \u2014 downloading file...');
+      setTimeout(()=>{dlCSV(csv);btn.disabled=false;setTimeout(()=>prog.classList.remove('active'),2000)},500);
+    }catch(e){showErr('Error: '+e.message);btn.disabled=false;prog.classList.remove('active')}
+  },100);
+}
+function updProg(p,l){document.getElementById('progressFill').style.width=p+'%';document.getElementById('progressLabel').textContent=l}
 
-  if (type === 'direct') {
-    if (!directSources.includes(val)) directSources.push(val);
-  } else {
-    if (!otaSources.includes(val)) otaSources.push(val);
+function buildCSV(){
+  const nd=parseInt(document.getElementById('numDays').value)||90,
+    occT=parseInt(document.getElementById('occSlider').value)/100,
+    hist=document.getElementById('toggleHistorical').checked,
+    hs=document.getElementById('historicalStart').value,
+    incP=document.getElementById('togglePending').checked,
+    incO=document.getElementById('toggleOTA').checked;
+  const today=new Date();today.setHours(0,0,0,0);
+  let sd;if(hist&&hs)sd=new Date(hs+'T00:00:00');else sd=new Date(today);
+  const ed=new Date(today);ed.setDate(ed.getDate()+nd);
+  const totD=Math.round((ed-sd)/(864e5));
+  updProg(10,'Building inventory grid...');
+  const inv={};rooms.forEach(r=>{inv[r.name]=new Array(totD).fill(r.count)});
+  const allSrc=[...directSources];if(incO)allSrc.push(...otaSources);
+  const totR=rooms.reduce((s,r)=>s+r.count,0),tgtRN=Math.round(totR*totD*occT);
+  updProg(20,'Generating reservations...');
+  const res=[];let used=0,ni=0,att=0;const maxA=tgtRN*4;
+  while(used<tgtRN&&att<maxA){
+    att++;
+    const ci=Math.floor(Math.random()*(totD-1));
+    const sw=[1,1,1,2,2,2,2,3,3,3,3,3,4,4,4,5,5,6,7];
+    const nn=sw[Math.floor(Math.random()*sw.length)];
+    const co=ci+nn;if(co>totD)continue;
+    const rt=pickRoom();if(!rt)continue;
+    let ok=true;for(let d=ci;d<co;d++){if(inv[rt.name][d]<=0){ok=false;break}}
+    if(!ok)continue;
+    for(let d=ci;d<co;d++)inv[rt.name][d]--;
+    used+=nn;
+    const cid=new Date(sd);cid.setDate(cid.getDate()+ci);
+    const cod=new Date(sd);cod.setDate(cod.getDate()+co);
+    const bo=Math.floor(Math.random()*89)+1;
+    const db=new Date(cid);db.setDate(db.getDate()-bo);
+    const fn=FN[ni%FN.length],ln=LN[(ni+37)%LN.length];ni++;
+    const name=fn+' '+ln;
+    const email='fakeguest.'+fn.toLowerCase()+'.'+ln.toLowerCase()+'@cloudbeds.com';
+    const rn=Math.floor(Math.random()*9e12+1e12).toString();
+    const ad=[1,1,1,1,2,2,2,3][Math.floor(Math.random()*8)];
+    const ch=Math.random()<.15?Math.floor(Math.random()*3)+1:0;
+    let st='Confirmed';if(incP&&Math.random()<.12)st='Confirmation Pending';
+    const src=allSrc[Math.floor(Math.random()*allSrc.length)];
+    const gt=(rt.rate*nn).toFixed(2);
+    const pr=Math.random();let ap,bd;
+    if(pr<.5){ap='0.00';bd=gt}else if(pr<.85){ap=gt;bd='0.00'}
+    else{const pt=(parseFloat(gt)*(Math.random()*.6+.2)).toFixed(2);ap=pt;bd=(parseFloat(gt)-parseFloat(pt)).toFixed(2)}
+    res.push([name,email,' ',rn,fD(db),fD(cid),fD(cod),rt.name,rt.rate,rt.name+':'+rt.rate,nn,ad,ch,st,rt.name,gt,ap,bd,src,'']);
+    if(res.length%100===0)updProg(20+Math.min(70,(used/tgtRN)*70),'Generated '+res.length+' reservations...');
   }
-  input.value = '';
-  renderSourceChips();
-}
-
-function removeSource(type, index) {
-  if (type === 'direct') directSources.splice(index, 1);
-  else otaSources.splice(index, 1);
-  renderSourceChips();
-}
-
-function renderSourceChips() {
-  document.getElementById('directChips').innerHTML = directSources.map((s, i) => `
-    <div class="source-chip">
-      ${escapeHtml(s)}
-      <button class="chip-remove" onclick="removeSource('direct', ${i})">×</button>
-    </div>
-  `).join('');
-
-  document.getElementById('otaChips').innerHTML = otaSources.map((s, i) => `
-    <div class="source-chip ota">
-      ${escapeHtml(s)}
-      <button class="chip-remove" onclick="removeSource('ota', ${i})">×</button>
-    </div>
-  `).join('');
-}
-
-// ═══════════════════════════════════════════
-// UI HELPERS
-// ═══════════════════════════════════════════
-function toggleConditional(id, show) {
-  document.getElementById(id).classList.toggle('open', show);
-}
-
-function updateOccSlider() {
-  document.getElementById('occValue').textContent = document.getElementById('occSlider').value + '%';
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// ═══════════════════════════════════════════
-// SUMMARY
-// ═══════════════════════════════════════════
-function buildSummary() {
-  const totalRooms = rooms.reduce((sum, r) => sum + r.count, 0);
-  const numDays = parseInt(document.getElementById('numDays').value) || 90;
-  const occ = parseInt(document.getElementById('occSlider').value);
-  const historical = document.getElementById('toggleHistorical').checked;
-  const pending = document.getElementById('togglePending').checked;
-  const ota = document.getElementById('toggleOTA').checked;
-
-  const totalRoomNights = totalRooms * numDays;
-  const estReservations = Math.round(totalRoomNights * (occ / 100) / 2.5); // avg 2.5 night stay
-
-  document.getElementById('summaryGrid').innerHTML = `
-    <div class="summary-stat">
-      <div class="label">Total Room Types</div>
-      <div class="value">${rooms.length}</div>
-    </div>
-    <div class="summary-stat">
-      <div class="label">Total Rooms</div>
-      <div class="value accent">${totalRooms}</div>
-    </div>
-    <div class="summary-stat">
-      <div class="label">Days to Cover</div>
-      <div class="value">${numDays}</div>
-    </div>
-    <div class="summary-stat">
-      <div class="label">Target Occupancy</div>
-      <div class="value accent">${occ}%</div>
-    </div>
-    <div class="summary-stat">
-      <div class="label">Est. Reservations</div>
-      <div class="value green">~${estReservations}</div>
-    </div>
-    <div class="summary-stat">
-      <div class="label">Features</div>
-      <div class="value" style="font-size:13px; font-family:'DM Sans'; font-weight:500;">
-        ${[historical ? '📅 Historical' : '', pending ? '⏳ Pending' : '', ota ? '🌐 OTA' : ''].filter(Boolean).join('<br>') || 'Standard'}
-      </div>
-    </div>
-  `;
-
-  document.getElementById('roomSummary').innerHTML = `
-    <label class="form-label" style="margin-bottom:10px">Room Types</label>
-    ${rooms.map(r => `
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;">
-        <span>${escapeHtml(r.name)}</span>
-        <span style="color:var(--text-muted);font-family:'Space Mono',monospace;font-size:13px;">
-          $${r.rate}/night × ${r.count} rooms
-        </span>
-      </div>
-    `).join('')}
-  `;
-
-  const allSources = [...directSources, ...(ota ? otaSources : [])];
-  document.getElementById('sourceSummary').innerHTML = `
-    <label class="form-label" style="margin-bottom:10px">Booking Sources</label>
-    <div class="source-chips">
-      ${allSources.map(s => `<div class="source-chip">${escapeHtml(s)}</div>`).join('')}
-    </div>
-  `;
-}
-
-// ═══════════════════════════════════════════
-// CSV GENERATION ENGINE
-// ═══════════════════════════════════════════
-function generateCSV() {
-  const btn = document.getElementById('btnGenerate');
-  btn.disabled = true;
-  const prog = document.getElementById('genProgress');
-  prog.classList.add('active');
-  updateProgress(5, 'Initializing...');
-
-  setTimeout(() => {
-    try {
-      const csv = buildCSVData();
-      updateProgress(100, 'Complete! Downloading...');
-
-      setTimeout(() => {
-        downloadCSV(csv);
-        btn.disabled = false;
-        setTimeout(() => { prog.classList.remove('active'); }, 2000);
-      }, 500);
-    } catch(e) {
-      alert('Error generating CSV: ' + e.message);
-      btn.disabled = false;
-      prog.classList.remove('active');
-    }
-  }, 100);
-}
-
-function updateProgress(pct, label) {
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressLabel').textContent = label;
-}
-
-function buildCSVData() {
-  const numDays = parseInt(document.getElementById('numDays').value) || 90;
-  const occTarget = parseInt(document.getElementById('occSlider').value) / 100;
-  const historical = document.getElementById('toggleHistorical').checked;
-  const histStart = document.getElementById('historicalStart').value;
-  const includePending = document.getElementById('togglePending').checked;
-  const includeOTA = document.getElementById('toggleOTA').checked;
-
-  // Calculate date range
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  let startDate;
-  if (historical && histStart) {
-    startDate = new Date(histStart + 'T00:00:00');
-  } else {
-    startDate = new Date(today);
-  }
-  const endDate = new Date(today);
-  endDate.setDate(endDate.getDate() + numDays);
-
-  const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
-
-  updateProgress(10, 'Building inventory grid...');
-
-  // Build daily inventory tracker: rooms[roomType][dayIndex] = available count
-  const inventory = {};
-  rooms.forEach(r => {
-    inventory[r.name] = new Array(totalDays).fill(r.count);
-  });
-
-  // Determine sources
-  const allSources = [...directSources];
-  if (includeOTA) allSources.push(...otaSources);
-
-  // Calculate total room-nights needed
-  const totalRooms = rooms.reduce((sum, r) => sum + r.count, 0);
-  const targetRoomNights = Math.round(totalRooms * totalDays * occTarget);
-
-  updateProgress(20, 'Generating reservations...');
-
-  // Generate reservations
-  const reservations = [];
-  let usedRoomNights = 0;
-  let nameIndex = 0;
-  let attempts = 0;
-  const maxAttempts = targetRoomNights * 4;
-
-  while (usedRoomNights < targetRoomNights && attempts < maxAttempts) {
-    attempts++;
-
-    // Random check-in day
-    const checkinDayIdx = Math.floor(Math.random() * (totalDays - 1));
-    // Random stay length: weighted toward 1-4 nights, occasionally longer
-    const stayWeights = [1,1,1,2,2,2,2,3,3,3,3,3,4,4,4,5,5,6,7];
-    const numNights = stayWeights[Math.floor(Math.random() * stayWeights.length)];
-    const checkoutDayIdx = checkinDayIdx + numNights;
-
-    if (checkoutDayIdx > totalDays) continue;
-
-    // Pick a random room type (weighted by room count)
-    const roomType = pickWeightedRoom();
-    if (!roomType) continue;
-
-    // Check availability for entire stay
-    let available = true;
-    for (let d = checkinDayIdx; d < checkoutDayIdx; d++) {
-      if (inventory[roomType.name][d] <= 0) {
-        available = false;
-        break;
-      }
-    }
-    if (!available) continue;
-
-    // Book it — reduce inventory
-    for (let d = checkinDayIdx; d < checkoutDayIdx; d++) {
-      inventory[roomType.name][d]--;
-    }
-
-    usedRoomNights += numNights;
-
-    // Build reservation record
-    const checkinDate = new Date(startDate);
-    checkinDate.setDate(checkinDate.getDate() + checkinDayIdx);
-    const checkoutDate = new Date(startDate);
-    checkoutDate.setDate(checkoutDate.getDate() + checkoutDayIdx);
-
-    // Date booked: random date between (checkin - 90 days) and (checkin - 1 day)
-    const bookOffset = Math.floor(Math.random() * 89) + 1;
-    const dateBooked = new Date(checkinDate);
-    dateBooked.setDate(dateBooked.getDate() - bookOffset);
-
-    // Guest name
-    const firstName = FIRST_NAMES[nameIndex % FIRST_NAMES.length];
-    const lastName = LAST_NAMES[(nameIndex + 37) % LAST_NAMES.length];
-    nameIndex++;
-
-    const fullName = firstName + ' ' + lastName;
-    const email = `fakeguest.${firstName.toLowerCase()}.${lastName.toLowerCase()}@cloudbeds.com`;
-
-    // Reservation number: 13-digit random
-    const resNum = Math.floor(Math.random() * 9e12 + 1e12).toString();
-
-    // Adults: 1-3 weighted
-    const adults = [1,1,1,1,2,2,2,3][Math.floor(Math.random() * 8)];
-    const children = Math.random() < 0.15 ? Math.floor(Math.random() * 3) + 1 : 0;
-
-    // Status
-    let status = 'Confirmed';
-    if (includePending && Math.random() < 0.12) {
-      status = 'Confirmation Pending';
-    }
-
-    // Source
-    const source = allSources[Math.floor(Math.random() * allSources.length)];
-
-    // Financials
-    const grandTotal = (roomType.rate * numNights).toFixed(2);
-    const paidRatio = Math.random();
-    let amountPaid, balanceDue;
-    if (paidRatio < 0.5) {
-      amountPaid = '0.00';
-      balanceDue = grandTotal;
-    } else if (paidRatio < 0.85) {
-      amountPaid = grandTotal;
-      balanceDue = '0.00';
-    } else {
-      const partial = (parseFloat(grandTotal) * (Math.random() * 0.6 + 0.2)).toFixed(2);
-      amountPaid = partial;
-      balanceDue = (parseFloat(grandTotal) - parseFloat(partial)).toFixed(2);
-    }
-
-    // Rate column value (Room Type:Rate format)
-    const rateColValue = `${roomType.name}:${roomType.rate}`;
-
-    reservations.push({
-      name: fullName,
-      email,
-      phone: ' ',
-      resNum,
-      dateBooked: formatDate(dateBooked),
-      checkin: formatDate(checkinDate),
-      checkout: formatDate(checkoutDate),
-      roomTypeHeader: roomType.name,
-      rate: roomType.rate,
-      rateCol: rateColValue,
-      nights: numNights,
-      adults,
-      children,
-      status,
-      roomTypeAssigned: roomType.name,
-      grandTotal,
-      amountPaid,
-      balanceDue,
-      source,
-      notes: ''
-    });
-
-    // Progress
-    if (reservations.length % 100 === 0) {
-      updateProgress(20 + Math.min(70, (usedRoomNights / targetRoomNights) * 70),
-        `Generated ${reservations.length} reservations...`);
-    }
-  }
-
-  updateProgress(92, `Building CSV with ${reservations.length} reservations...`);
-
-  // Build CSV string
-  // Header matches the Cloudbeds import format
-  const rateColHeader = rooms.map(r => `${r.name}:${r.rate.toFixed(5)}`).join(',');
-
-  // The original format has a dynamic rate column header. We'll use the first room type for the header column name
-  // but actually the format seems to use a single rate column. Let's match the original:
-  const headers = [
-    'Name','Email','Phone Number','Reservation Number','Date Booked',
-    'Check-in Date','Check-out Date','Room Type','Rate',
-    rooms[0].name + ':' + rooms[0].rate.toFixed(5),
-    'Number of Nights','Adults','Children','Status','Room Type',
-    'Grand Total','Amount Paid','Balance Due','Source','Notes'
-  ];
-
-  let csv = headers.map(h => csvEscape(h)).join(',') + '\n';
-
-  reservations.forEach(r => {
-    const row = [
-      r.name, r.email, r.phone, r.resNum, r.dateBooked,
-      r.checkin, r.checkout, r.roomTypeHeader, r.rate,
-      r.rateCol,
-      r.nights, r.adults, r.children, r.status, r.roomTypeAssigned,
-      r.grandTotal, r.amountPaid, r.balanceDue, r.source, r.notes
-    ];
-    csv += row.map(v => csvEscape(String(v))).join(',') + '\n';
-  });
-
+  updProg(92,'Building CSV \u2014 '+res.length+' reservations...');
+  const hdr=['Name','Email','Phone Number','Reservation Number','Date Booked','Check-in Date','Check-out Date','Room Type','Rate',rooms[0].name+':'+rooms[0].rate.toFixed(5),'Number of Nights','Adults','Children','Status','Room Type','Grand Total','Amount Paid','Balance Due','Source','Notes'];
+  let csv=hdr.map(cE).join(',')+'\n';
+  res.forEach(r=>{csv+=r.map(v=>cE(String(v))).join(',')+'\n'});
   return csv;
 }
-
-function pickWeightedRoom() {
-  const totalWeight = rooms.reduce((s, r) => s + r.count, 0);
-  let rand = Math.random() * totalWeight;
-  for (const r of rooms) {
-    rand -= r.count;
-    if (rand <= 0) return r;
-  }
-  return rooms[rooms.length - 1];
+function pickRoom(){const tw=rooms.reduce((s,r)=>s+r.count,0);let rn=Math.random()*tw;for(const r of rooms){rn-=r.count;if(rn<=0)return r}return rooms[rooms.length-1]}
+function fD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function cE(v){if(v.includes(',')||v.includes('"')||v.includes('\n'))return'"'+v.replace(/"/g,'""')+'"';return v}
+function dlCSV(csv){
+  const n=new Date(),ts=n.getFullYear()+String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0')+'_'+String(n.getHours()).padStart(2,'0')+String(n.getMinutes()).padStart(2,'0')+String(n.getSeconds()).padStart(2,'0');
+  const b=new Blob([csv],{type:'text/csv;charset=utf-8;'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='IMPORT_'+ts+'.csv';a.click();URL.revokeObjectURL(a.href);
 }
-
-function formatDate(d) {
-  return d.getFullYear() + '-' +
-    String(d.getMonth() + 1).padStart(2, '0') + '-' +
-    String(d.getDate()).padStart(2, '0');
-}
-
-function csvEscape(val) {
-  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-    return '"' + val.replace(/"/g, '""') + '"';
-  }
-  return val;
-}
-
-function downloadCSV(csv) {
-  const now = new Date();
-  const timestamp = now.getFullYear() +
-    String(now.getMonth()+1).padStart(2,'0') +
-    String(now.getDate()).padStart(2,'0') + '_' +
-    String(now.getHours()).padStart(2,'0') +
-    String(now.getMinutes()).padStart(2,'0') +
-    String(now.getSeconds()).padStart(2,'0');
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `IMPORT_${timestamp}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
-
-// ── Boot ──
 init();
 </script>
 </body>
