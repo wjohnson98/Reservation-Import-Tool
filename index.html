@@ -274,6 +274,59 @@ input[type="range"]::-moz-range-thumb {
 }
 .progress-label { font-size: 11px; color: var(--cb-muted); margin-top: 8px; font-weight: 500; }
 
+/* ── Landing / Saved Imports ── */
+.landing { max-width: 780px; margin: 40px auto; padding: 0 28px; }
+.landing-header { text-align: center; margin-bottom: 28px; }
+.landing-header h2 { font-size: 20px; font-weight: 700; color: var(--cb-navy); margin-bottom: 4px; }
+.landing-header p { font-size: 12px; color: var(--cb-muted); }
+
+.saved-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.saved-card {
+  background: var(--cb-white); border: 1.5px solid var(--cb-border); border-radius: var(--radius);
+  padding: 16px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+  position: relative;
+}
+.saved-card:hover { border-color: var(--cb-blue); box-shadow: 0 2px 12px rgba(27,79,255,.1); }
+.saved-card .card-name { font-size: 14px; font-weight: 700; color: var(--cb-navy); margin-bottom: 4px; }
+.saved-card .card-meta { font-size: 11px; color: var(--cb-muted); line-height: 1.6; }
+.saved-card .card-rooms { margin-top: 8px; }
+.saved-card .card-rooms .chip { font-size: 10px; padding: 2px 8px; }
+.saved-card .card-delete {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px;
+  border: 1.5px solid var(--cb-border); background: var(--cb-white); border-radius: 6px;
+  color: var(--cb-muted); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s, border-color .15s, color .15s;
+}
+.saved-card:hover .card-delete { opacity: 1; }
+.saved-card .card-delete:hover { border-color: var(--cb-error); color: var(--cb-error); background: #FFF0F2; }
+
+.new-import-card {
+  background: var(--cb-white); border: 1.5px dashed var(--cb-border); border-radius: var(--radius);
+  padding: 16px; cursor: pointer; transition: border-color .15s, background .15s;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100px; gap: 6px;
+}
+.new-import-card:hover { border-color: var(--cb-blue); background: var(--cb-blue-light); }
+.new-import-card .plus { font-size: 24px; color: var(--cb-blue); font-weight: 700; line-height: 1; }
+.new-import-card span { font-size: 12px; font-weight: 600; color: var(--cb-blue); }
+
+.no-saved { text-align: center; padding: 32px 20px; color: var(--cb-muted); font-size: 12px; }
+
+/* ── Save Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(13,31,78,.45);
+  z-index: 200; align-items: center; justify-content: center;
+}
+.modal-overlay.visible { display: flex; }
+.modal {
+  background: var(--cb-white); border-radius: var(--radius); padding: 24px;
+  width: 400px; max-width: 90vw; box-shadow: 0 8px 32px rgba(13,31,78,.18);
+}
+.modal h3 { font-size: 15px; font-weight: 700; color: var(--cb-navy); margin-bottom: 4px; }
+.modal p { font-size: 11px; color: var(--cb-muted); margin-bottom: 16px; }
+.modal .btns { margin-top: 16px; }
+
 .step-section { display: none; }
 .step-section.active { display: block; animation: fadeIn .3s ease; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -312,6 +365,20 @@ input[type="range"]::-moz-range-thumb {
   <span class="topbar-badge">v1.0</span>
 </div>
 
+<!-- ═══ Landing: Saved Imports ═══ -->
+<div id="landingPage" class="landing">
+  <div class="landing-header">
+    <h2>Reservation Import Generator</h2>
+    <p>Load a saved property configuration or start a new import from scratch.</p>
+  </div>
+  <div class="saved-grid" id="savedGrid">
+    <!-- Populated by JS -->
+  </div>
+</div>
+
+<!-- ═══ Wizard (hidden until started) ═══ -->
+<div id="wizardWrap" style="display:none;">
+
 <div class="stepper-wrap">
   <div class="stepper">
     <div class="step-item active" data-step="1"><div class="step-circle">1</div><span class="step-label">Room Types</span></div>
@@ -346,7 +413,7 @@ input[type="range"]::-moz-range-thumb {
       <div class="tip">Room type names must match exactly what is configured in Cloudbeds, otherwise the import will fail.</div>
     </div>
     <div class="btns btns-between">
-      <div></div>
+      <button class="ghost" onclick="backToLanding()">&larr; Home</button>
       <button class="primary" onclick="goToStep(2)">Continue &rarr;</button>
     </div>
   </div>
@@ -453,8 +520,14 @@ input[type="range"]::-moz-range-thumb {
       </div>
     </div>
     <div class="btns btns-between">
-      <button class="ghost" onclick="goToStep(3)">&larr; Back</button>
-      <button class="success" id="btnGenerate" onclick="generateCSV()">&darr; Generate &amp; Download CSV</button>
+      <div style="display:flex;gap:8px;">
+        <button class="ghost" onclick="goToStep(3)">&larr; Back</button>
+        <button class="ghost" onclick="backToLanding()">Home</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="secondary" onclick="openSaveModal()">&#128190; Save Property</button>
+        <button class="success" id="btnGenerate" onclick="generateCSV()">&darr; Generate &amp; Download CSV</button>
+      </div>
     </div>
     <div class="gen-progress" id="genProgress">
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -464,24 +537,225 @@ input[type="range"]::-moz-range-thumb {
 
 </div>
 
+</div><!-- /wizardWrap -->
+
+<!-- ═══ Save Modal ═══ -->
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <h3>Save Configuration</h3>
+    <p>Save this property's room types, rates, sources, and settings so you can quickly generate new imports later.</p>
+    <div class="row">
+      <label class="field-label">Property Name</label>
+      <input type="text" id="savePropertyName" placeholder="e.g. The Grand Hotel Downtown">
+      <div class="muted">This is how it will appear on the home screen</div>
+    </div>
+    <div class="btns">
+      <button class="primary" onclick="confirmSave()">Save Property</button>
+      <button class="ghost" onclick="closeSaveModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="error" id="errorBox"></div>
 
 <script>
+const STORAGE_KEY = 'cb_saved_imports';
 let currentStep=1, rooms=[];
 let directSources=['Website/Booking Engine','Walk-In','Phone','Email'];
 let otaSources=['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
+let loadedPropertyName = '';
 
 const FN=["James","Michael","Robert","William","David","John","Joseph","Charles","Thomas","Daniel","Matthew","Anthony","Christopher","Joshua","Andrew","Ryan","Kevin","Brian","Jason","Eric","Adam","Justin","Steven","Paul","Brandon","Kyle","Nathan","Aaron","Zachary","Tyler","Emma","Olivia","Ava","Isabella","Sophia","Mia","Charlotte","Amelia","Harper","Evelyn","Abigail","Emily","Elizabeth","Sofia","Avery","Ella","Scarlett","Grace","Chloe","Victoria","Riley","Aria","Lily","Aubrey","Zoey","Hannah","Layla","Nora","Camila","Luna","Penelope","Leah","Madelyn","Stella","Hazel","Ellie","Paisley","Audrey","Skylar","Violet","Claire","Bella","Aurora","Savannah","Brooklyn","Aaliyah","Gabriella","Sadie","Ariana","Genesis","Naomi","Elena","Caroline","Kennedy","Maya","Willow","Kinsley","Mackenzie","Ruby","Gianna","Makayla","Kylie","Morgan","Allison","Faith","Alexandra","Alice","Alexa","Jasmine","Eva","Sarah","Madeline","Lydia","Piper","Natalie","Adeline","Serenity","Taylor","Eliana","Hailey","Brianna","Bailey","Andrea","Katherine","Melody","Lauren","Autumn","Nevaeh","Reagan","Samantha","Anna","Josephine","Ivy","Valentina","Lucy","Maria","Liam","Noah","Oliver","Elijah","Lucas","Mason","Logan","Alexander","Ethan","Jacob","Henry","Sebastian","Jack","Aiden","Owen","Samuel","Benjamin","Leo","Levi","Caleb","Dylan","Luke","Gabriel","Julian","Isaac","Lincoln","Carter","Jayden","Connor","Mateo","Wyatt","Jeremiah","Nolan","Easton","Christian","Hunter","Jonathan","Asher","Cameron","Adrian","Miles","Eli","Theodore","Grayson","Ian","Landon","Xavier","Kai","Carson","Jaxon","Ezra","Colton","Cooper","Everett","Parker","Dominic","Nathaniel","Max","Harrison","Axel","Brooks","Bentley","Emerson","Declan","Tristan","Brody","Gavin","Maxwell","Rowan","Damian","Micah","Weston","Jorge","Felix","Patrick","Sean","Alan","Marcus","Jesse","Grant","Victor","Derek","Peter","Vincent","Raymond","Cole","Troy","Philip","Mitchell","Oscar","Eduardo","Wesley","Andre","Travis","Dustin","Scott","Brady","Finn","Archer","Milo","Jasper","Hugo","Silas"];
 const LN=["Anderson","Johnson","Miller","Davis","Wilson","Thompson","Martinez","Taylor","Moore","Jackson","White","Harris","Lewis","Walker","Hall","Allen","Young","King","Scott","Green","Baker","Hill","Adams","Nelson","Carter","Roberts","Mitchell","Perez","Turner","Phillips","Campbell","Parker","Evans","Edwards","Collins","Stewart","Sanchez","Morris","Rogers","Reed","Cook","Morgan","Bell","Murphy","Bailey","Rivera","Cooper","Richardson","Cox","Howard","Ward","Torres","Peterson","Gray","Ramirez","James","Watson","Brooks","Kelly","Sanders","Price","Bennett","Wood","Barnes","Ross","Henderson","Coleman","Jenkins","Perry","Powell","Long","Patterson","Hughes","Flores","Washington","Butler","Simmons","Foster","Gonzales","Bryant","Alexander","Russell","Griffin","Diaz","Hayes","Myers","Ford","Hamilton","Graham","Sullivan","Wallace","Woods","Cole","West","Jordan","Owens","Reynolds","Fisher","Ellis","Harrison","Gibson","McDonald","Cruz","Marshall","Ortiz","Gomez","Murray","Freeman","Wells","Webb","Simpson","Stevens","Tucker","Porter","Hunter","Hicks","Crawford","Henry","Boyd","Mason","Morales","Kennedy","Warren","Dixon","Ramos","Reyes","Burns","Gordon","Shaw","Holmes","Rice","Robertson","Hunt","Black","Daniels","Palmer","Mills","Nichols","Grant","Knight","Ferguson","Rose","Stone","Hawkins","Dunn","Perkins","Hudson","Spencer","Gardner","Stephens","Payne","Pierce","Berry","Matthews","Arnold","Wagner","Willis","Ray","Watkins","Olson","Carroll","Duncan","Snyder","Hart","Cunningham","Bradley","Lane","Andrews","Ruiz","Harper","Fox","Riley","Armstrong","Carpenter","Weaver","Greene","Lawrence","Elliott","Chavez","Sims","Austin","Peters","Kelley","Franklin","Lawson"];
 
-function init(){
-  addRoom();
-  addRoom();
+// ═══════════════════════════════════════════
+// SAVED IMPORTS (localStorage)
+// ═══════════════════════════════════════════
+function getSavedImports(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||{}; }catch(e){ return {}; }
+}
+function setSavedImports(data){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function renderLanding(){
+  const saved = getSavedImports();
+  const keys = Object.keys(saved).sort((a,b)=>a.localeCompare(b));
+  const grid = document.getElementById('savedGrid');
+
+  let html = '';
+
+  // New import card always first
+  html += `<div class="new-import-card" onclick="startNewImport()">
+    <span class="plus">+</span>
+    <span>New Import</span>
+  </div>`;
+
+  if(keys.length === 0){
+    html += `<div class="no-saved" style="grid-column:1/-1;">No saved properties yet. Start a new import and save it for quick reuse.</div>`;
+  } else {
+    keys.forEach(name => {
+      const cfg = saved[name];
+      const roomCount = (cfg.rooms||[]).reduce((s,r)=>s+r.count,0);
+      const roomTypes = (cfg.rooms||[]).length;
+      const roomChips = (cfg.rooms||[]).map(r=>`<span class="chip">${esc(r.name)}</span>`).join('');
+      const savedDate = cfg.savedAt ? new Date(cfg.savedAt).toLocaleDateString() : '';
+      html += `<div class="saved-card" onclick="loadSavedImport('${esc(name.replace(/'/g,"\\'"))}')">
+        <button class="card-delete" onclick="event.stopPropagation();deleteSaved('${esc(name.replace(/'/g,"\\'"))}')">&times;</button>
+        <div class="card-name">${esc(name)}</div>
+        <div class="card-meta">
+          ${roomTypes} room type${roomTypes!==1?'s':''} &middot; ${roomCount} total rooms<br>
+          Occupancy: ${cfg.occupancy||65}% &middot; ${cfg.numDays||90} days
+          ${savedDate ? '<br>Saved: '+savedDate : ''}
+        </div>
+        <div class="card-rooms chip-list">${roomChips}</div>
+      </div>`;
+    });
+  }
+  grid.innerHTML = html;
+}
+
+function startNewImport(){
+  loadedPropertyName = '';
+  rooms = [];
+  directSources = ['Website/Booking Engine','Walk-In','Phone','Email'];
+  otaSources = ['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
+  addRoom(); addRoom();
   renderChips();
+  resetConfigDefaults();
+  showWizard();
+  goToStep(1);
+}
+
+function loadSavedImport(name){
+  const saved = getSavedImports();
+  const cfg = saved[name];
+  if(!cfg){ showErr('Saved property not found.'); return; }
+
+  loadedPropertyName = name;
+
+  // Restore rooms
+  rooms = [];
+  (cfg.rooms||[]).forEach(r => {
+    const id = Date.now()+Math.random();
+    rooms.push({id, name:r.name, rate:r.rate||0, count:r.count||0});
+  });
+  if(rooms.length===0){ addRoom(); addRoom(); }
+  renderRooms();
+
+  // Restore sources
+  directSources = cfg.directSources||['Website/Booking Engine','Walk-In','Phone','Email'];
+  otaSources = cfg.otaSources||['Booking.com (Hotel Collect)','Expedia (Hotel Collect Booking)'];
+  renderChips();
+
+  // Restore config
+  document.getElementById('toggleHistorical').checked = !!cfg.historical;
+  toggleCond('historicalDate', !!cfg.historical);
+  if(cfg.historicalStart) document.getElementById('historicalStart').value = cfg.historicalStart;
+  document.getElementById('togglePending').checked = !!cfg.pending;
+  document.getElementById('toggleOTA').checked = !!cfg.ota;
+  document.getElementById('numDays').value = cfg.numDays||90;
+  document.getElementById('occSlider').value = cfg.occupancy||65;
+  updateOcc();
+
+  showWizard();
+  goToStep(1);
+}
+
+function deleteSaved(name){
+  if(!confirm('Delete saved property "'+name+'"?')) return;
+  const saved = getSavedImports();
+  delete saved[name];
+  setSavedImports(saved);
+  renderLanding();
+}
+
+function resetConfigDefaults(){
+  document.getElementById('toggleHistorical').checked = false;
+  toggleCond('historicalDate', false);
+  const d=new Date(); d.setMonth(d.getMonth()-6);
+  document.getElementById('historicalStart').value = d.toISOString().split('T')[0];
+  document.getElementById('togglePending').checked = false;
+  document.getElementById('toggleOTA').checked = false;
+  document.getElementById('numDays').value = 90;
+  document.getElementById('occSlider').value = 65;
+  updateOcc();
+}
+
+function showWizard(){
+  document.getElementById('landingPage').style.display = 'none';
+  document.getElementById('wizardWrap').style.display = 'block';
+}
+
+function backToLanding(){
+  document.getElementById('wizardWrap').style.display = 'none';
+  document.getElementById('landingPage').style.display = 'block';
+  renderLanding();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── Save Modal ──
+function openSaveModal(){
+  document.getElementById('savePropertyName').value = loadedPropertyName || '';
+  document.getElementById('saveModal').classList.add('visible');
+  setTimeout(()=>document.getElementById('savePropertyName').focus(),100);
+}
+function closeSaveModal(){
+  document.getElementById('saveModal').classList.remove('visible');
+}
+function confirmSave(){
+  const name = document.getElementById('savePropertyName').value.trim();
+  if(!name){ showErr('Please enter a property name.'); return; }
+
+  const saved = getSavedImports();
+
+  // If renaming, delete old key
+  if(loadedPropertyName && loadedPropertyName !== name && saved[loadedPropertyName]){
+    delete saved[loadedPropertyName];
+  }
+
+  saved[name] = {
+    rooms: rooms.map(r=>({name:r.name, rate:r.rate, count:r.count})),
+    directSources: [...directSources],
+    otaSources: [...otaSources],
+    historical: document.getElementById('toggleHistorical').checked,
+    historicalStart: document.getElementById('historicalStart').value,
+    pending: document.getElementById('togglePending').checked,
+    ota: document.getElementById('toggleOTA').checked,
+    numDays: parseInt(document.getElementById('numDays').value)||90,
+    occupancy: parseInt(document.getElementById('occSlider').value)||65,
+    savedAt: new Date().toISOString()
+  };
+
+  setSavedImports(saved);
+  loadedPropertyName = name;
+  closeSaveModal();
+  clearErr();
+
+  // Brief confirmation
+  const btn = document.querySelector('.secondary[onclick="openSaveModal()"]');
+  if(btn){
+    const orig = btn.innerHTML;
+    btn.innerHTML = '&#10003; Saved!';
+    btn.style.borderColor = 'var(--cb-green)';
+    btn.style.color = 'var(--cb-green)';
+    setTimeout(()=>{ btn.innerHTML = orig; btn.style.borderColor=''; btn.style.color=''; }, 1800);
+  }
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+function init(){
+  renderLanding();
+
+  // Set default historical date
   const d=new Date(); d.setMonth(d.getMonth()-6);
   document.getElementById('historicalStart').value=d.toISOString().split('T')[0];
+
   document.getElementById('directSourceInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSource('direct')});
   document.getElementById('otaSourceInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSource('ota')});
+  document.getElementById('savePropertyName').addEventListener('keydown',e=>{if(e.key==='Enter')confirmSave()});
 }
 
 function goToStep(s){
