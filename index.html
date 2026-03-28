@@ -475,8 +475,8 @@ const FN=["James","Michael","Robert","William","David","John","Joseph","Charles"
 const LN=["Anderson","Johnson","Miller","Davis","Wilson","Thompson","Martinez","Taylor","Moore","Jackson","White","Harris","Lewis","Walker","Hall","Allen","Young","King","Scott","Green","Baker","Hill","Adams","Nelson","Carter","Roberts","Mitchell","Perez","Turner","Phillips","Campbell","Parker","Evans","Edwards","Collins","Stewart","Sanchez","Morris","Rogers","Reed","Cook","Morgan","Bell","Murphy","Bailey","Rivera","Cooper","Richardson","Cox","Howard","Ward","Torres","Peterson","Gray","Ramirez","James","Watson","Brooks","Kelly","Sanders","Price","Bennett","Wood","Barnes","Ross","Henderson","Coleman","Jenkins","Perry","Powell","Long","Patterson","Hughes","Flores","Washington","Butler","Simmons","Foster","Gonzales","Bryant","Alexander","Russell","Griffin","Diaz","Hayes","Myers","Ford","Hamilton","Graham","Sullivan","Wallace","Woods","Cole","West","Jordan","Owens","Reynolds","Fisher","Ellis","Harrison","Gibson","McDonald","Cruz","Marshall","Ortiz","Gomez","Murray","Freeman","Wells","Webb","Simpson","Stevens","Tucker","Porter","Hunter","Hicks","Crawford","Henry","Boyd","Mason","Morales","Kennedy","Warren","Dixon","Ramos","Reyes","Burns","Gordon","Shaw","Holmes","Rice","Robertson","Hunt","Black","Daniels","Palmer","Mills","Nichols","Grant","Knight","Ferguson","Rose","Stone","Hawkins","Dunn","Perkins","Hudson","Spencer","Gardner","Stephens","Payne","Pierce","Berry","Matthews","Arnold","Wagner","Willis","Ray","Watkins","Olson","Carroll","Duncan","Snyder","Hart","Cunningham","Bradley","Lane","Andrews","Ruiz","Harper","Fox","Riley","Armstrong","Carpenter","Weaver","Greene","Lawrence","Elliott","Chavez","Sims","Austin","Peters","Kelley","Franklin","Lawson"];
 
 function init(){
-  addRoom('Classic King',249,10);
-  addRoom('Executive King Suite',309,5);
+  addRoom();
+  addRoom();
   renderChips();
   const d=new Date(); d.setMonth(d.getMonth()-6);
   document.getElementById('historicalStart').value=d.toISOString().split('T')[0];
@@ -521,13 +521,19 @@ function updateRoom(id,f,v){
   const r=rooms.find(x=>x.id===id);if(!r)return;
   if(f==='name')r.name=v;else if(f==='rate')r.rate=parseFloat(v)||0;else if(f==='count')r.count=parseInt(v)||0;
 }
+const rowPlaceholders=[
+  {name:'e.g. Deluxe King',rate:'249',count:'10'},
+  {name:'e.g. Deluxe Queen',rate:'259',count:'8'}
+];
 function renderRooms(){
-  document.getElementById('roomTableBody').innerHTML=rooms.map(r=>`<tr>
-    <td><input type="text" placeholder="e.g. Deluxe King" value="${esc(r.name)}" onchange="updateRoom(${r.id},'name',this.value)"></td>
-    <td><input type="number" placeholder="249" value="${r.rate||''}" min="0" step="0.01" onchange="updateRoom(${r.id},'rate',this.value)"></td>
-    <td><input type="number" placeholder="10" value="${r.count||''}" min="1" onchange="updateRoom(${r.id},'count',this.value)"></td>
+  document.getElementById('roomTableBody').innerHTML=rooms.map((r,i)=>{
+    const ph=rowPlaceholders[i]||{name:'e.g. Standard Room',rate:'199',count:'5'};
+    return`<tr>
+    <td><input type="text" placeholder="${ph.name}" value="${esc(r.name)}" onchange="updateRoom(${r.id},'name',this.value)"></td>
+    <td><input type="number" placeholder="${ph.rate}" value="${r.rate||''}" min="0" step="0.01" onchange="updateRoom(${r.id},'rate',this.value)"></td>
+    <td><input type="number" placeholder="${ph.count}" value="${r.count||''}" min="1" onchange="updateRoom(${r.id},'count',this.value)"></td>
     <td style="text-align:center"><button class="btn-remove" onclick="removeRoom(${r.id})">&times;</button></td>
-  </tr>`).join('');
+  </tr>`}).join('');
 }
 
 function addSource(t){
