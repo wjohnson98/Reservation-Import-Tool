@@ -630,6 +630,18 @@ input[type="range"]::-moz-range-thumb {
   </div>
 </div>
 
+<!-- ═══ Delete Confirmation Modal ═══ -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete Property</h3>
+    <p>Are you sure you want to delete <strong id="deletePropertyName"></strong>? This cannot be undone.</p>
+    <div class="btns">
+      <button style="background:var(--cb-error);color:#fff;box-shadow:0 2px 8px rgba(215,43,63,.25);" onclick="confirmDelete()">Delete</button>
+      <button class="ghost" onclick="closeDeleteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="error" id="errorBox"></div>
 
 <script>
@@ -751,12 +763,25 @@ function loadSavedImport(name){
   goToStep(1);
 }
 
+let pendingDeleteName = '';
 function deleteSaved(name){
-  if(!confirm('Delete saved property "'+name+'"?')) return;
-  const saved = getSavedImports();
-  delete saved[name];
-  setSavedImports(saved);
-  renderLanding();
+  pendingDeleteName = name;
+  document.getElementById('deletePropertyName').textContent = '"' + name + '"';
+  document.getElementById('deleteModal').classList.add('visible');
+}
+function confirmDelete(){
+  if(pendingDeleteName){
+    const saved = getSavedImports();
+    delete saved[pendingDeleteName];
+    setSavedImports(saved);
+    pendingDeleteName = '';
+    closeDeleteModal();
+    renderLanding();
+  }
+}
+function closeDeleteModal(){
+  document.getElementById('deleteModal').classList.remove('visible');
+  pendingDeleteName = '';
 }
 
 function resetConfigDefaults(){
