@@ -242,6 +242,45 @@ input[type="range"]::-moz-range-thumb {
 .source-add-row input { flex: 1; }
 .source-add-row button { flex-shrink: 0; height: 38px; }
 
+/* ── Screenshot Upload ── */
+.upload-zone {
+  border: 1.5px dashed var(--cb-border); border-radius: var(--radius);
+  padding: 24px; text-align: center; cursor: pointer;
+  transition: border-color .15s, background .15s;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--cb-blue); background: var(--cb-blue-light);
+}
+.upload-zone .upload-icon {
+  width: 40px; height: 40px; margin: 0 auto 10px;
+  background: var(--cb-blue-light); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.upload-zone .upload-icon svg { fill: var(--cb-blue); }
+.upload-zone .upload-title { font-size: 13px; font-weight: 600; color: var(--cb-navy); margin-bottom: 2px; }
+.upload-zone .upload-sub { font-size: 11px; color: var(--cb-muted); }
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-processing {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 20px; color: var(--cb-blue); font-size: 13px; font-weight: 500;
+}
+.upload-processing .spinner {
+  width: 20px; height: 20px; border: 2.5px solid var(--cb-border);
+  border-top-color: var(--cb-blue); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.or-divider {
+  display: flex; align-items: center; gap: 12px; margin: 16px 0;
+  font-size: 11px; font-weight: 600; color: var(--cb-muted); text-transform: uppercase; letter-spacing: .5px;
+}
+.or-divider::before, .or-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--cb-border);
+}
+
 .summary-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px; margin-bottom: 20px;
@@ -371,9 +410,7 @@ input[type="range"]::-moz-range-thumb {
     <h2>Reservation Import Generator</h2>
     <p>Load a saved property configuration or start a new import from scratch.</p>
   </div>
-  <div class="saved-grid" id="savedGrid">
-    <!-- Populated by JS -->
-  </div>
+  <div class="saved-grid" id="savedGrid"></div>
 </div>
 
 <!-- ═══ Wizard (hidden until started) ═══ -->
@@ -398,8 +435,25 @@ input[type="range"]::-moz-range-thumb {
     <div class="panel">
       <div class="panel-header">
         <h2>Configure Room Types</h2>
-        <p>Add each accommodation type from the Cloudbeds property. Name must match the PMS exactly.</p>
+        <p>Upload a screenshot of your Cloudbeds Accommodations page, or add room types manually below.</p>
       </div>
+
+      <!-- Screenshot upload -->
+      <div id="uploadZone" class="upload-zone">
+        <div class="upload-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17 13v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3m4-5l3-3m0 0l3 3m-3-3v9" fill="none" stroke="#1B4FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="upload-title">Upload Accommodations Screenshot</div>
+        <div class="upload-sub">Drag &amp; drop or click to upload &mdash; PNG, JPG supported</div>
+        <input type="file" id="screenshotFile" accept="image/png,image/jpeg,image/webp" onchange="handleScreenshot(this.files[0])">
+      </div>
+      <div id="uploadProcessing" class="upload-processing" style="display:none;">
+        <div class="spinner"></div>
+        <span>Analyzing screenshot with AI&hellip;</span>
+      </div>
+
+      <div class="or-divider">or add manually</div>
+
       <table id="roomTable">
         <thead><tr>
           <th style="width:45%">Accommodation Name</th>
@@ -410,7 +464,7 @@ input[type="range"]::-moz-range-thumb {
         <tbody id="roomTableBody"></tbody>
       </table>
       <button class="btn-add" onclick="addRoom()"><span style="font-size:16px">+</span> Add Room Type</button>
-      <div class="tip">Room type names must match exactly what is configured in Cloudbeds, otherwise the import will fail.</div>
+      <div class="tip">Room type names must match exactly what is configured in Cloudbeds. Rates still need to be entered manually after screenshot import.</div>
     </div>
     <div class="btns btns-between">
       <button class="ghost" onclick="backToLanding()">&larr; Home</button>
@@ -744,10 +798,144 @@ function confirmSave(){
 }
 
 // ═══════════════════════════════════════════
+// SCREENSHOT IMPORT (Anthropic Vision API)
+// ═══════════════════════════════════════════
+async function handleScreenshot(file){
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    showErr('Please upload an image file (PNG, JPG).'); return;
+  }
+
+  const zone = document.getElementById('uploadZone');
+  const proc = document.getElementById('uploadProcessing');
+  zone.style.display = 'none';
+  proc.style.display = 'flex';
+  clearErr();
+
+  try {
+    // Convert to base64
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type;
+
+    // Call Anthropic API with vision
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: mediaType, data: base64 }
+            },
+            {
+              type: "text",
+              text: `Look at this screenshot from a Cloudbeds PMS Accommodations page. Extract ONLY the accommodation types from the table.
+
+For each accommodation row, extract:
+- "name": the exact accommodation name text (e.g. "Standard King", "Deluxe Suite with Resort View")
+- "count": the number from the TOTAL ACCOMMODATIONS column (the last numeric column). If you cannot find it, use the UNITS column instead.
+
+IMPORTANT RULES:
+- Skip any row that says "TOTAL" — that is the summary row, not a room type.
+- Skip any room type that has "Day Use" in the name — these are not overnight accommodations.
+- Skip any room type that contains "FLEX" or "ANYTHING GOES" — these are virtual room types.
+- Return ONLY valid JSON, no markdown, no backticks, no preamble.
+
+Return a JSON array like: [{"name":"Standard King","count":10},{"name":"Deluxe King","count":10}]`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = (data.content||[]).map(b=>b.text||'').join('').trim();
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+
+    if(!Array.isArray(parsed) || parsed.length === 0){
+      throw new Error('No accommodations found in the screenshot.');
+    }
+
+    // Clear existing empty rows and populate
+    rooms = [];
+    parsed.forEach(item => {
+      const id = Date.now()+Math.random();
+      rooms.push({
+        id,
+        name: (item.name||'').trim(),
+        rate: 0,  // User must fill in rates
+        count: parseInt(item.count)||0
+      });
+    });
+    renderRooms();
+
+    // Show success state
+    zone.style.display = 'block';
+    proc.style.display = 'none';
+
+    // Brief success flash on the zone
+    zone.style.borderColor = 'var(--cb-green)';
+    zone.style.background = 'var(--cb-green-light)';
+    zone.querySelector('.upload-title').textContent = parsed.length + ' room types imported!';
+    zone.querySelector('.upload-sub').textContent = 'Add nightly rates below, then continue.';
+    setTimeout(()=>{
+      zone.style.borderColor = '';
+      zone.style.background = '';
+      zone.querySelector('.upload-title').textContent = 'Upload Accommodations Screenshot';
+      zone.querySelector('.upload-sub').textContent = 'Drag & drop or click to upload — PNG, JPG supported';
+    }, 4000);
+
+    // Reset file input
+    document.getElementById('screenshotFile').value = '';
+
+  } catch(e) {
+    zone.style.display = 'block';
+    proc.style.display = 'none';
+    document.getElementById('screenshotFile').value = '';
+    showErr('Screenshot import failed: ' + (e.message||e));
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(r.result.split(',')[1]);
+    r.onerror = ()=> rej(new Error('Failed to read file'));
+    r.readAsDataURL(file);
+  });
+}
+
+function setupDragDrop(){
+  const zone = document.getElementById('uploadZone');
+  ['dragenter','dragover'].forEach(evt=>{
+    zone.addEventListener(evt, e=>{
+      e.preventDefault(); e.stopPropagation();
+      zone.classList.add('dragover');
+    });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    zone.addEventListener(evt, e=>{
+      e.preventDefault(); e.stopPropagation();
+      zone.classList.remove('dragover');
+    });
+  });
+  zone.addEventListener('drop', e=>{
+    const file = e.dataTransfer?.files?.[0];
+    if(file) handleScreenshot(file);
+  });
+}
+
+// ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
 function init(){
   renderLanding();
+  setupDragDrop();
 
   // Set default historical date
   const d=new Date(); d.setMonth(d.getMonth()-6);
