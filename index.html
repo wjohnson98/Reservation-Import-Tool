@@ -415,6 +415,24 @@ input[type="range"]::-moz-range-thumb {
     <p>Load a saved property configuration or start a new import from scratch.</p>
   </div>
   <div class="saved-grid" id="savedGrid"></div>
+
+  <!-- Import History -->
+  <div id="historySection" style="display:none;margin-top:28px;">
+    <div class="section-label">Recent Imports</div>
+    <div class="panel" style="padding:0;overflow:hidden;">
+      <table id="historyTable" style="margin:0;">
+        <thead><tr>
+          <th>Property</th>
+          <th>Generated</th>
+          <th style="text-align:center;">Reservations</th>
+          <th>Date Range</th>
+          <th style="text-align:center;">Occupancy</th>
+          <th style="text-align:center;">Flags</th>
+        </tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ Wizard (hidden until started) ═══ -->
@@ -650,6 +668,7 @@ input[type="range"]::-moz-range-thumb {
 
 <script>
 const STORAGE_KEY = 'cb_saved_imports';
+const HISTORY_KEY = 'cb_import_history';
 let currentStep=1, rooms=[];
 let directSources=['Website/Booking Engine','Walk-In','Phone','Email'];
 
@@ -667,6 +686,58 @@ function getSavedImports(){
 }
 function setSavedImports(data){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ═══════════════════════════════════════════
+// IMPORT HISTORY LOG
+// ═══════════════════════════════════════════
+function getHistory(){
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY))||[]; }catch(e){ return []; }
+}
+function saveHistory(entries){
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+}
+function logImport(propertyName, resCount, dateStart, dateEnd, occupancy, flags){
+  const entries = getHistory();
+  entries.unshift({
+    property: propertyName || 'Untitled',
+    timestamp: new Date().toISOString(),
+    reservations: resCount,
+    dateStart: dateStart,
+    dateEnd: dateEnd,
+    occupancy: occupancy,
+    flags: flags
+  });
+  // Keep last 20 entries
+  if(entries.length > 20) entries.length = 20;
+  saveHistory(entries);
+}
+function getLastImportForProperty(name){
+  const entries = getHistory();
+  return entries.find(e => e.property === name) || null;
+}
+function renderHistory(){
+  const entries = getHistory();
+  const section = document.getElementById('historySection');
+  const tbody = document.getElementById('historyBody');
+  if(!entries.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  tbody.innerHTML = entries.slice(0,15).map(e => {
+    const d = new Date(e.timestamp);
+    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const flagChips = (e.flags||[]).map(f => {
+      const cls = f==='Historical'?'':f==='Pending'?' orange':' green';
+      return `<span class="chip${cls}" style="font-size:9px;padding:1px 7px;">${esc(f)}</span>`;
+    }).join(' ');
+    return `<tr>
+      <td><strong style="color:var(--cb-navy);">${esc(e.property)}</strong></td>
+      <td style="font-size:11px;color:var(--cb-muted);">${dateStr}</td>
+      <td style="text-align:center;font-weight:700;color:var(--cb-navy);">${e.reservations.toLocaleString()}</td>
+      <td style="font-size:11px;color:var(--cb-muted);">${esc(e.dateStart||'')} &rarr; ${esc(e.dateEnd||'')}</td>
+      <td style="text-align:center;font-weight:600;color:var(--cb-blue);">${e.occupancy}%</td>
+      <td style="text-align:center;">${flagChips||'<span style="color:var(--cb-muted);font-size:10px;">&mdash;</span>'}</td>
+    </tr>`;
+  }).join('');
 }
 
 function renderLanding(){
@@ -691,6 +762,13 @@ function renderLanding(){
       const roomTypes = (cfg.rooms||[]).length;
       const roomChips = (cfg.rooms||[]).map(r=>`<span class="chip">${esc(r.name)}</span>`).join('');
       const savedDate = cfg.savedAt ? new Date(cfg.savedAt).toLocaleDateString() : '';
+      // Last import info
+      const lastImp = getLastImportForProperty(name);
+      let lastImpLine = '';
+      if(lastImp){
+        const ago = timeSince(new Date(lastImp.timestamp));
+        lastImpLine = `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--cb-border);font-size:10px;color:var(--cb-muted);">Last import: ${ago} &middot; ${lastImp.reservations.toLocaleString()} res</div>`;
+      }
       html += `<div class="saved-card" onclick="loadSavedImport('${esc(name.replace(/'/g,"\\'"))}')">
         <button class="card-delete" onclick="event.stopPropagation();deleteSaved('${esc(name.replace(/'/g,"\\'"))}')">&times;</button>
         <div class="card-name">${esc(name)}</div>
@@ -700,10 +778,21 @@ function renderLanding(){
           ${savedDate ? '<br>Saved: '+savedDate : ''}
         </div>
         <div class="card-rooms chip-list">${roomChips}</div>
+        ${lastImpLine}
       </div>`;
     });
   }
   grid.innerHTML = html;
+  renderHistory();
+}
+
+function timeSince(date){
+  const s = Math.floor((new Date()-date)/1000);
+  if(s<60) return 'just now';
+  const m=Math.floor(s/60); if(m<60) return m+'m ago';
+  const h=Math.floor(m/60); if(h<24) return h+'h ago';
+  const d=Math.floor(h/24); if(d<7) return d+'d ago';
+  return date.toLocaleDateString();
 }
 
 function startNewImport(){
@@ -1175,6 +1264,8 @@ function buildSummary(){
   document.getElementById('sourceSummaryChips').innerHTML=directSources.map(s=>`<span class="chip">${esc(s)}</span>`).join('');
 }
 
+let lastGenStats = null;
+
 function generateCSV(){
   const btn=document.getElementById('btnGenerate');btn.disabled=true;
   const prog=document.getElementById('genProgress');prog.classList.add('active');
@@ -1186,6 +1277,21 @@ function generateCSV(){
       updProg(100,'Complete \u2014 downloading file...');
       setTimeout(()=>{
         dlCSV(csv);
+        // Log the import
+        if(lastGenStats){
+          const flags = [];
+          if(lastGenStats.historical) flags.push('Historical');
+          if(lastGenStats.pending) flags.push('Pending');
+          if(lastGenStats.notes) flags.push('Notes');
+          logImport(
+            loadedPropertyName || 'Unsaved Property',
+            lastGenStats.resCount,
+            lastGenStats.dateStart,
+            lastGenStats.dateEnd,
+            lastGenStats.occupancy,
+            flags
+          );
+        }
         btn.disabled=false;
         setTimeout(()=>{
           prog.classList.remove('active');
@@ -1335,6 +1441,18 @@ function buildCSV(){
 
   let csv=hdr.map(cE).join(',')+'\n';
   res.forEach(r=>{csv+=r.map(v=>cE(String(v))).join(',')+'\n'});
+
+  // Capture stats for history log
+  lastGenStats = {
+    resCount: res.length,
+    dateStart: fD(sd),
+    dateEnd: fD(ed),
+    occupancy: Math.round(occT*100),
+    historical: hist,
+    pending: incP,
+    notes: incN
+  };
+
   return csv;
 }
 function pickRoom(){const tw=rooms.reduce((s,r)=>s+r.count,0);let rn=Math.random()*tw;for(const r of rooms){rn-=r.count;if(rn<=0)return r}return rooms[rooms.length-1]}
