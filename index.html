@@ -46,16 +46,21 @@ body {
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
 .logo-mark {
-  width: 34px; height: 34px; background: var(--cb-blue); border-radius: 8px;
+  width: 34px; height: 34px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  overflow: hidden;
 }
-.logo-mark svg { fill: white; }
+.logo-mark img { width: 100%; height: 100%; object-fit: cover; }
 .logo-text h1 { font-size: 15px; font-weight: 700; color: var(--cb-navy); line-height: 1.2; }
 .logo-text p { font-size: 11px; color: var(--cb-muted); font-weight: 400; }
-.topbar-badge {
-  font-size: 10px; font-weight: 700; color: var(--cb-blue);
-  background: var(--cb-blue-light); padding: 3px 10px; border-radius: 20px;
-  text-transform: uppercase; letter-spacing: .3px;
+.tutorial-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 16px; border-radius: 20px; font-family: inherit;
+  font-size: 12px; font-weight: 600; color: var(--cb-blue);
+  background: var(--cb-blue-light); border: 1.5px solid transparent;
+  text-decoration: none; transition: border-color .15s, background .15s;
+}
+.tutorial-btn:hover { border-color: var(--cb-blue); }
 }
 
 .stepper-wrap { max-width: 780px; margin: 0 auto; padding: 24px 28px 0; }
@@ -393,15 +398,14 @@ input[type="range"]::-moz-range-thumb {
 <div class="topbar">
   <div class="topbar-left">
     <div class="logo-mark">
-      <svg viewBox="0 0 20 20" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-        <path d="M15.5 8.5a4 4 0 0 0-7.6-1.6A3 3 0 1 0 4 13h11.5a3 3 0 0 0 0-4.5z"/>
-      </svg>
+      <img src="data:image/png;base64,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" alt="Cloudbeds">
     </div>
     <div class="logo-text">
       <h1>Reservation Import Generator</h1>
       <p>Cloudbeds PMS &mdash; Demo Data Tool</p>
     </div>
   </div>
+  <a href="https://www.cloudbeds.com" target="_blank" class="tutorial-btn">&#9654; Tutorial Video</a>
 </div>
 
 <!-- ═══ Landing: Saved Imports ═══ -->
