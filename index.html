@@ -138,6 +138,17 @@ input::placeholder { color: var(--cb-muted); opacity: 0.7; }
   color: var(--cb-navy); margin-top: 16px;
 }
 
+.warn-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--cb-orange-light); border: 1px solid #F5C99B;
+  border-left: 3px solid var(--cb-orange); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 20px;
+}
+.warn-banner .warn-icon { font-size: 16px; line-height: 1.2; flex-shrink: 0; }
+.warn-banner .warn-title { font-size: 13px; font-weight: 700; color: var(--cb-orange); }
+.warn-banner .warn-sub { font-size: 11px; color: var(--cb-navy); margin-top: 3px; line-height: 1.5; }
+.warn-banner .warn-sub strong { font-weight: 600; }
+
 .badge {
   display: inline-block; background: var(--cb-blue-light); color: var(--cb-blue);
   font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
@@ -602,6 +613,13 @@ input[type="range"]::-moz-range-thumb {
       <div class="panel-header">
         <h2>Review &amp; Generate</h2>
         <p>Verify your configuration, then generate and download the Cloudbeds import CSV.</p>
+      </div>
+      <div class="warn-banner">
+        <span class="warn-icon">&#9888;</span>
+        <div>
+          <div class="warn-title">MDF Application Language must be in English</div>
+          <div class="warn-sub">Account &gt; Settings &gt; System &gt; Application Language. It's the first option under &ldquo;Format Preferences.&rdquo;</div>
+        </div>
       </div>
       <div class="summary-grid" id="summaryGrid"></div>
       <div class="divider"></div>
